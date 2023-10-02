@@ -25,7 +25,7 @@ go github.com/pomelo-la/go-toolkit/service/aws/config
 # or
 go github.com/pomelo-la/go-toolkit/service/aws/sqs
 # or
-go get github.com/aws/aws-sdk-go-v2/log
+go github.com/pomelo-la/go-toolki/log
 # etc
 ```
 
