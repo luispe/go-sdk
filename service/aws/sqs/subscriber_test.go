@@ -251,16 +251,16 @@ func TestSubscriberReceiveMessageWithWaitTimeSeconds(t *testing.T) {
 	}
 }
 
-func TestSubscriberDeleteMessage(t *testing.T) {
+func TestSubscriberDeleteMessages(t *testing.T) {
 	type args struct {
-		msg string
+		msg []string
 	}
 	type mockPubSub struct {
-		output *sqs.DeleteMessageOutput
+		output *sqs.DeleteMessageBatchOutput
 		err    error
 	}
 	type expected struct {
-		output *sqs.DeleteMessageOutput
+		output *sqs.DeleteMessageBatchOutput
 		err    error
 	}
 
@@ -272,13 +272,19 @@ func TestSubscriberDeleteMessage(t *testing.T) {
 	}{
 		{
 			name:       "success",
-			args:       args{msg: "some-message"},
-			mockPubSub: &mockPubSub{output: &sqs.DeleteMessageOutput{}, err: nil},
-			want:       expected{output: &sqs.DeleteMessageOutput{}, err: nil},
+			args:       args{msg: []string{"some-message", "another-message"}},
+			mockPubSub: &mockPubSub{output: &sqs.DeleteMessageBatchOutput{}, err: nil},
+			want:       expected{output: &sqs.DeleteMessageBatchOutput{}, err: nil},
+		},
+		{
+			name:       "some messages failed to delete",
+			args:       args{msg: []string{"some-message", "another-message"}},
+			mockPubSub: &mockPubSub{output: &sqs.DeleteMessageBatchOutput{Failed: make([]types.BatchResultErrorEntry, 1)}, err: nil},
+			want:       expected{output: &sqs.DeleteMessageBatchOutput{Failed: make([]types.BatchResultErrorEntry, 1)}, err: nil},
 		},
 		{
 			name:       "error",
-			args:       args{msg: "some-message"},
+			args:       args{msg: []string{"some-message"}},
 			mockPubSub: &mockPubSub{output: nil, err: assert.AnError},
 			want:       expected{output: nil, err: assert.AnError},
 		},
@@ -295,14 +301,17 @@ func TestSubscriberDeleteMessage(t *testing.T) {
 
 			if tt.mockPubSub != nil {
 				client.EXPECT().
-					DeleteMessage(gomock.Any(), gomock.Any()).
+					DeleteMessageBatch(gomock.Any(), gomock.Any()).
 					Return(tt.mockPubSub.output, tt.mockPubSub.err).
 					Times(1)
 			}
 
-			got, err := sub.DeleteMessage(ctx, tt.args.msg)
+			got, err := sub.DeleteMessages(ctx, tt.args.msg...)
 			assert.Equal(t, tt.want.err, err)
 			assert.Equal(t, tt.want.output, got)
+			if tt.want.output != nil {
+				assert.ElementsMatch(t, tt.want.output.Failed, got.Failed)
+			}
 		})
 	}
 }
