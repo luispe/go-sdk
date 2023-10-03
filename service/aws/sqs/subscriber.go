@@ -3,6 +3,7 @@ package sqs
 import (
 	"context"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
@@ -32,6 +33,7 @@ func NewSubscriber(sub Consumer, url string) (*Subscriber, error) {
 }
 
 // ReceiveMessage retrieves one or more messages (up to 10).
+//
 // Using the WaitTimeSeconds parameter enables long-poll support. For more information, see
 // Amazon SQS Long Polling (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-long-polling.html)
 func (s Subscriber) ReceiveMessage(ctx context.Context, optFns ...func(options *Options)) (*sqs.ReceiveMessageOutput, error) {
@@ -61,6 +63,22 @@ func (s Subscriber) ReceiveMessage(ctx context.Context, optFns ...func(options *
 	}
 
 	return output, err
+}
+
+// DeleteMessage deletes a message from the Amazon SQS queue associated with the Subscriber.
+//
+// It returns a pointer to sqs.DeleteMessageOutput and an error.
+// If the operation is successful, the output will contain the result of the operation.
+func (s Subscriber) DeleteMessage(ctx context.Context, msg string) (*sqs.DeleteMessageOutput, error) {
+	output, err := s.sub.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+		QueueUrl:      aws.String(s.url),
+		ReceiptHandle: aws.String(msg),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
 }
 
 // Options holds the options for receiving messages from SQS.

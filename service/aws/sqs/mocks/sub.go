@@ -39,6 +39,26 @@ func (m *Consumer) EXPECT() *ConsumerMockRecorder {
 	return m.recorder
 }
 
+// DeleteMessage mocks base method.
+func (m *Consumer) DeleteMessage(arg0 context.Context, arg1 *sqs.DeleteMessageInput, arg2 ...func(*sqs.Options)) (*sqs.DeleteMessageOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteMessage", varargs...)
+	ret0, _ := ret[0].(*sqs.DeleteMessageOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteMessage indicates an expected call of DeleteMessage.
+func (mr *ConsumerMockRecorder) DeleteMessage(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMessage", reflect.TypeOf((*Consumer)(nil).DeleteMessage), varargs...)
+}
+
 // ReceiveMessage mocks base method.
 func (m *Consumer) ReceiveMessage(arg0 context.Context, arg1 *sqs.ReceiveMessageInput, arg2 ...func(*sqs.Options)) (*sqs.ReceiveMessageOutput, error) {
 	m.ctrl.T.Helper()

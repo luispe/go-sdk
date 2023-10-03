@@ -18,10 +18,14 @@ type Producer interface {
 		optFns ...func(*sqs.Options)) (*sqs.SendMessageOutput, error)
 }
 
-// Consumer is an interface that wraps the basic ReceiveMessage methods.
+// Consumer is an interface that wraps the basic ReceiveMessage and DeleteMessage methods.
 type Consumer interface {
 	// ReceiveMessage one or more messages (up to 10), from the specified queue.
 	ReceiveMessage(ctx context.Context,
 		params *sqs.ReceiveMessageInput,
 		optFns ...func(*sqs.Options)) (*sqs.ReceiveMessageOutput, error)
+
+	DeleteMessage(ctx context.Context,
+		params *sqs.DeleteMessageInput,
+		optFns ...func(*sqs.Options)) (*sqs.DeleteMessageOutput, error)
 }

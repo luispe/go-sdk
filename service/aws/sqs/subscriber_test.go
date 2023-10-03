@@ -251,6 +251,62 @@ func TestSubscriberReceiveMessageWithWaitTimeSeconds(t *testing.T) {
 	}
 }
 
+func TestSubscriberDeleteMessage(t *testing.T) {
+	type args struct {
+		msg string
+	}
+	type mockPubSub struct {
+		output *sqs.DeleteMessageOutput
+		err    error
+	}
+	type expected struct {
+		output *sqs.DeleteMessageOutput
+		err    error
+	}
+
+	tests := []struct {
+		name       string
+		args       args
+		mockPubSub *mockPubSub
+		want       expected
+	}{
+		{
+			name:       "success",
+			args:       args{msg: "some-message"},
+			mockPubSub: &mockPubSub{output: &sqs.DeleteMessageOutput{}, err: nil},
+			want:       expected{output: &sqs.DeleteMessageOutput{}, err: nil},
+		},
+		{
+			name:       "error",
+			args:       args{msg: "some-message"},
+			mockPubSub: &mockPubSub{output: nil, err: assert.AnError},
+			want:       expected{output: nil, err: assert.AnError},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl, ctx := gomock.WithContext(context.Background(), t)
+			defer ctrl.Finish()
+
+			client := mock.NewConsumer(ctrl)
+			sub, err := queue.NewSubscriber(client, "https://sqs.us-east-1.amazonaws.com/012345678901/use1-somequeue")
+			assert.NoError(t, err)
+
+			if tt.mockPubSub != nil {
+				client.EXPECT().
+					DeleteMessage(gomock.Any(), gomock.Any()).
+					Return(tt.mockPubSub.output, tt.mockPubSub.err).
+					Times(1)
+			}
+
+			got, err := sub.DeleteMessage(ctx, tt.args.msg)
+			assert.Equal(t, tt.want.err, err)
+			assert.Equal(t, tt.want.output, got)
+		})
+	}
+}
+
 func mockSubscriber() *queue.Subscriber {
 	sub, _ := queue.NewSubscriber(&sqs.Client{}, "https://sqs.us-east-1.amazonaws.com/012345678901/use1-somequeue")
 	return sub

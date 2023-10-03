@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
-// ErrJSONMarshal is an error variable that represents a JSON marshal error.
 var (
+	// ErrJSONMarshal is an error variable that represents a JSON marshal error.
 	ErrJSONMarshal = errors.New("JSON marshal data")
 	// ErrInvalidURL is an error indicating that the SQS URL provided is invalid.
 	ErrInvalidURL = errors.New("sqs url must no be less of 54 characters")
