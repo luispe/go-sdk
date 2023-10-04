@@ -12,6 +12,9 @@ all: help
 clean: ## Remove report files
 	"$(CURDIR)/scripts/clean_files.sh"
 
+createpkg: ## Remove report files
+	"$(CURDIR)/scripts/create_pkg.sh"
+
 ## Go Helpers:
 update: ## Update dependencies
 	"$(CURDIR)/scripts/update_dependencies.sh"

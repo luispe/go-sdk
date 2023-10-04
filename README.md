@@ -58,7 +58,19 @@ go github.com/pomelo-la/go-toolki/log
 
 ## Would you like to collaborate?
 
+In order to guide you we use gum, to install it is very simple, 
+run in your terminal of preference
+
+```shell
+brew install gum
+
+# after gum installed
+make createpkg
+```
+
 You are more than welcome, please read our contribution guidelines.
 
 - [Code Of Conduct](./code-of-conduct.md)
 - [Contributing guidelines](./CONTRIBUTING.md)
+
+Happy coding
