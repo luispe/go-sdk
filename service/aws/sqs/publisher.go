@@ -8,7 +8,10 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/google/uuid"
 )
+
+const _groupID = "go-toolkit-publisher"
 
 var (
 	// ErrJSONMarshal is an error variable that represents a JSON marshal error.
@@ -55,6 +58,44 @@ func (p Publisher) SendJSONMessage(ctx context.Context, data map[string]any) (*s
 	return output, nil
 }
 
+// SendJSONFifoMessage sends a message to the AWS SQS fifo queue.
+//
+// Under the hood, converts the map[string]any parameter to a json string.
+//
+// If the message sending is successful, it returns nil. If there is an error
+// during the operation, an error is returned.
+func (p Publisher) SendJSONFifoMessage(ctx context.Context, data map[string]any, optFns ...func(options *PublisherOptions)) (*sqs.SendMessageOutput, error) {
+	msg, err := mapToString(data)
+	if err != nil {
+		return nil, err
+	}
+
+	var opt PublisherOptions
+	opt.client = &sqs.SendMessageInput{}
+	for _, fn := range optFns {
+		fn(&opt)
+	}
+	if opt.client.MessageGroupId == nil {
+		opt.client.MessageGroupId = aws.String(_groupID)
+	}
+
+	if opt.client.MessageDeduplicationId == nil {
+		opt.client.MessageDeduplicationId = aws.String(uuid.NewString())
+	}
+
+	output, err := p.pub.SendMessage(ctx, &sqs.SendMessageInput{
+		MessageDeduplicationId: opt.client.MessageDeduplicationId,
+		MessageGroupId:         opt.client.MessageGroupId,
+		MessageBody:            aws.String(msg),
+		QueueUrl:               aws.String(p.url),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
 // SendMessage sends a message to the AWS SQS queue.
 //
 // Under the hood, converts the data type any parameter to a string.
@@ -71,6 +112,29 @@ func (p Publisher) SendMessage(ctx context.Context, data any) (*sqs.SendMessageO
 	}
 
 	return output, nil
+}
+
+// PublisherOptions holds the options for publisher messages to SQS.
+type PublisherOptions struct {
+	client *sqs.SendMessageInput
+}
+
+// WithGroupID allows you to configure the tag (messageGroupID) to be used to publish messages.
+// The tag that specifies that a message belongs to a particular message group.
+// More information https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html
+func WithGroupID(groupID string) func(options *PublisherOptions) {
+	return func(opt *PublisherOptions) {
+		opt.client.MessageGroupId = aws.String(groupID)
+	}
+}
+
+// WithDeduplicationID allows you to configure the DeduplicationID (messageDeduplicationID) to be used to publish messages.
+// The DeduplicationID used for deduplication of sent messages.
+// More information https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html
+func WithDeduplicationID(deduplicationID string) func(options *PublisherOptions) {
+	return func(opt *PublisherOptions) {
+		opt.client.MessageDeduplicationId = aws.String(deduplicationID)
+	}
 }
 
 func mapToString[T any](data map[string]T) (string, error) {
