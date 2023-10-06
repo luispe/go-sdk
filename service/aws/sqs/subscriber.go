@@ -43,8 +43,8 @@ func NewSubscriber(sub Consumer, url string) (*Subscriber, error) {
 //
 // Using the WaitTimeSeconds parameter enables long-poll support. For more information, see
 // Amazon SQS Long Polling (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-long-polling.html)
-func (s Subscriber) ReceiveMessage(ctx context.Context, optFns ...func(options *Options)) (*sqs.ReceiveMessageOutput, error) {
-	var opt Options
+func (s Subscriber) ReceiveMessage(ctx context.Context, optFns ...func(options *SubscriberOptions)) (*sqs.ReceiveMessageOutput, error) {
+	var opt SubscriberOptions
 	opt.client = &sqs.ReceiveMessageInput{}
 	for _, fn := range optFns {
 		fn(&opt)
@@ -114,29 +114,29 @@ func ensureLengthMessages(messages ...string) error {
 	return nil
 }
 
-// Options holds the options for receiving messages from SQS.
-type Options struct {
+// SubscriberOptions holds the options for receiving messages from SQS.
+type SubscriberOptions struct {
 	client *sqs.ReceiveMessageInput
 }
 
 // WithMaxNumberOfMessages allows you to configure the MaxNumberOfMessages for use to receive messages.
-func WithMaxNumberOfMessages(maxNumberOfMessages int32) func(options *Options) {
-	return func(opt *Options) {
+func WithMaxNumberOfMessages(maxNumberOfMessages int32) func(options *SubscriberOptions) {
+	return func(opt *SubscriberOptions) {
 		opt.client.MaxNumberOfMessages = maxNumberOfMessages
 	}
 }
 
 // WithVisibilityTimeout allows you to configure the duration (in seconds)
 // that the received messages are hidden from subsequent retrieve requests.
-func WithVisibilityTimeout(visibilityTimeout int32) func(options *Options) {
-	return func(opt *Options) {
+func WithVisibilityTimeout(visibilityTimeout int32) func(options *SubscriberOptions) {
+	return func(opt *SubscriberOptions) {
 		opt.client.VisibilityTimeout = visibilityTimeout
 	}
 }
 
 // WithWaitTimeSeconds allows you to configure the WithVisibilityTimeout for use to enables long-poll support.
-func WithWaitTimeSeconds(waitTimeSeconds int32) func(options *Options) {
-	return func(opt *Options) {
+func WithWaitTimeSeconds(waitTimeSeconds int32) func(options *SubscriberOptions) {
+	return func(opt *SubscriberOptions) {
 		opt.client.WaitTimeSeconds = waitTimeSeconds
 	}
 }
