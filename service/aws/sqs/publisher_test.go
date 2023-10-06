@@ -324,6 +324,165 @@ func TestPubSubSendJSONFifoMsgWithDeduplicationID(t *testing.T) {
 	}
 }
 
+func TestPublishingSendFifoMessage(t *testing.T) {
+	type args struct {
+		data map[string]any
+	}
+	type mockPub struct {
+		output *sqs.SendMessageOutput
+		err    error
+	}
+	type expected struct {
+		output *sqs.SendMessageOutput
+		err    error
+	}
+	tests := []struct {
+		name    string
+		args    args
+		mockPub *mockPub
+		want    expected
+	}{
+		{
+			name:    "success",
+			args:    args{data: mockMsg()},
+			mockPub: &mockPub{output: &sqs.SendMessageOutput{}, err: nil},
+			want:    expected{output: &sqs.SendMessageOutput{}, err: nil},
+		},
+		{
+			name:    "error",
+			args:    args{data: mockMsg()},
+			mockPub: &mockPub{output: nil, err: assert.AnError},
+			want:    expected{output: nil, err: assert.AnError},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl, ctx := gomock.WithContext(context.Background(), t)
+			defer ctrl.Finish()
+			client := mock.NewProducer(ctrl)
+			pub, err := queue.NewPublisher(client, "https://sqs.us-east-1.amazonaws.com/012345678901/use1-somequeue")
+			assert.NoError(t, err)
+
+			if tt.mockPub != nil {
+				client.EXPECT().
+					SendMessage(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(tt.mockPub.output, tt.mockPub.err).
+					Times(1)
+			}
+
+			got, err := pub.SendFifoMessage(ctx, tt.args.data)
+			assert.Equal(t, tt.want.output, got)
+			assert.Equal(t, tt.want.err, err)
+		})
+	}
+}
+
+func TestPublishingSendFifoMsgWithGroupID(t *testing.T) {
+	type args struct {
+		data map[string]any
+	}
+	type mockPub struct {
+		output *sqs.SendMessageOutput
+		err    error
+	}
+	type expected struct {
+		output *sqs.SendMessageOutput
+		err    error
+	}
+	tests := []struct {
+		name    string
+		args    args
+		mockPub *mockPub
+		want    expected
+	}{
+		{
+			name:    "success",
+			args:    args{data: mockMsg()},
+			mockPub: &mockPub{output: &sqs.SendMessageOutput{}, err: nil},
+			want:    expected{output: &sqs.SendMessageOutput{}, err: nil},
+		},
+		{
+			name:    "error",
+			args:    args{data: mockMsg()},
+			mockPub: &mockPub{output: nil, err: assert.AnError},
+			want:    expected{output: nil, err: assert.AnError},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl, ctx := gomock.WithContext(context.Background(), t)
+			defer ctrl.Finish()
+			client := mock.NewProducer(ctrl)
+			pub, err := queue.NewPublisher(client, "https://sqs.us-east-1.amazonaws.com/012345678901/use1-somequeue")
+			assert.NoError(t, err)
+
+			if tt.mockPub != nil {
+				client.EXPECT().
+					SendMessage(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(tt.mockPub.output, tt.mockPub.err).
+					Times(1)
+			}
+
+			got, err := pub.SendFifoMessage(ctx, tt.args.data, queue.WithGroupID("some-group-id"))
+			assert.Equal(t, tt.want.output, got)
+			assert.Equal(t, tt.want.err, err)
+		})
+	}
+}
+
+func TestPublishingSendFifoMsgWithDeduplicationID(t *testing.T) {
+	type args struct {
+		data map[string]any
+	}
+	type mockPub struct {
+		output *sqs.SendMessageOutput
+		err    error
+	}
+	type expected struct {
+		output *sqs.SendMessageOutput
+		err    error
+	}
+	tests := []struct {
+		name    string
+		args    args
+		mockPub *mockPub
+		want    expected
+	}{
+		{
+			name:    "success",
+			args:    args{data: mockMsg()},
+			mockPub: &mockPub{output: &sqs.SendMessageOutput{}, err: nil},
+			want:    expected{output: &sqs.SendMessageOutput{}, err: nil},
+		},
+		{
+			name:    "error",
+			args:    args{data: mockMsg()},
+			mockPub: &mockPub{output: nil, err: assert.AnError},
+			want:    expected{output: nil, err: assert.AnError},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl, ctx := gomock.WithContext(context.Background(), t)
+			defer ctrl.Finish()
+			client := mock.NewProducer(ctrl)
+			pub, err := queue.NewPublisher(client, "https://sqs.us-east-1.amazonaws.com/012345678901/use1-somequeue")
+			assert.NoError(t, err)
+
+			if tt.mockPub != nil {
+				client.EXPECT().
+					SendMessage(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(tt.mockPub.output, tt.mockPub.err).
+					Times(1)
+			}
+
+			got, err := pub.SendFifoMessage(ctx, tt.args.data, queue.WithDeduplicationID("abc-123"))
+			assert.Equal(t, tt.want.output, got)
+			assert.Equal(t, tt.want.err, err)
+		})
+	}
+}
+
 func mockMsg() map[string]any {
 	data := map[string]any{
 		"key_int":    1,

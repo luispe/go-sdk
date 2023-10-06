@@ -114,6 +114,38 @@ func (p Publisher) SendMessage(ctx context.Context, data any) (*sqs.SendMessageO
 	return output, nil
 }
 
+// SendFifoMessage sends a message to the AWS SQS fifo queue.
+//
+// Under the hood, converts the data type any parameter to a string.
+//
+// If the message sending is successful, it returns nil. If there is an error
+// during the operation, an error is returned.
+func (p Publisher) SendFifoMessage(ctx context.Context, data any, optFns ...func(options *PublisherOptions)) (*sqs.SendMessageOutput, error) {
+	var opt PublisherOptions
+	opt.client = &sqs.SendMessageInput{}
+	for _, fn := range optFns {
+		fn(&opt)
+	}
+	if opt.client.MessageGroupId == nil {
+		opt.client.MessageGroupId = aws.String(_groupID)
+	}
+
+	if opt.client.MessageDeduplicationId == nil {
+		opt.client.MessageDeduplicationId = aws.String(uuid.NewString())
+	}
+	output, err := p.pub.SendMessage(ctx, &sqs.SendMessageInput{
+		MessageDeduplicationId: opt.client.MessageDeduplicationId,
+		MessageGroupId:         opt.client.MessageGroupId,
+		MessageBody:            aws.String(fmt.Sprintf("%v", data)),
+		QueueUrl:               aws.String(p.url),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
 // PublisherOptions holds the options for publisher messages to SQS.
 type PublisherOptions struct {
 	client *sqs.SendMessageInput
