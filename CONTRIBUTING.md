@@ -15,7 +15,7 @@ Generally speaking an RFC is needed when you want to add a new component or chan
 
 Though it seems a little bureaucratic, the process is in place in order to avoid frustration of a potential contributor by making the discussions take place before any code is written. Once the design and direction is fully agreed then the contributor can work peacefully knowing that their change will be committed.
 
-As of this moment all you need to do is create an issue and use the [Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.md).
+As of this moment all you need to do is create an issue and use the [Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.yml).
 
 Please prepend your issue title with `[RFC]` so that's easier to filter.
 
