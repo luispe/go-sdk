@@ -1,30 +1,83 @@
 ---
-name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: 'bug'
-assignees: ''
-
----
-
-**Describe the bug**
-A clear and concise description of what the bug is.
-
-**To Reproduce**
-Steps to reproduce the behavior:
-
-- Test case to reproduce the bug
-- Code sample that fails
-- Link to program source code
-
-**Expected behavior**
-A clear and concise description of what you expected to happen.
-
-**Environment (please complete the following information):**
-
-- OS: [e.g. Linux/Mac/Docker]
-- Go Version [e.g. 1.7.8]
-- API version [e.g. 1.1.0 or git commit hash]
-
-**Additional context**
-Add any other context about the problem here. [e.g. Links to previous bugs or bugs in third party projects]
+name: "🐛 Bug Report"
+description: Report a bug
+title: "(short issue description)"
+labels: [bug, needs-triage]
+assignees: []
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: What is the problem? A clear and concise description of the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: |
+        What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Behavior
+      description: |
+        What actually happened?
+        
+        Please include full errors, uncaught exceptions, stack traces, and relevant logs.
+        If service responses are relevant, please include wire logs.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      description: |
+        Provide a self-contained, concise snippet of code that can be used to reproduce the issue.
+        For more complex issues provide a repo with the smallest sample that reproduces the bug.
+        
+        Avoid including business logic or unrelated code, it makes diagnosis more difficult.
+        The code sample should be an SSCCE. See http://sscce.org/ for details. In short, please provide a code sample that we can copy/paste, run and reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Possible Solution
+      description: |
+        Suggest a fix/reason for the bug
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Information/Context
+      description: |
+        Anything else that might be relevant for troubleshooting this bug. Providing context helps us come up with a solution that is most useful in the real world.
+    validations:
+      required: false
+  - type: textarea
+    id: version
+    attributes:
+      label: Version
+      render: text
+      description: |
+        List the versions & crates of the aws-rust-sdk you are using.
+        `cargo tree | grep aws-`
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment details (OS name and version, etc.)
+    validations:
+        required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        It is also helpful to enable debug logging and include the log messages as displayed.
