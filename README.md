@@ -17,6 +17,8 @@ By having all our code in one place, we can share ideas, find bugs and fix them 
 
 ## Getting started
 
+Please read [CODE OF CONDUCT](./code-of-conduct.md)
+
 > NOTE
 > 
 > For privacy and security reasons the Pomelo repositories are private, 
@@ -56,21 +58,12 @@ go github.com/pomelo-la/go-toolki/log
 # etc
 ```
 
-## Would you like to collaborate?
+## Getting Help
 
-In order to guide you we use gum, to install it is very simple, 
-run in your terminal of preference
+* [GitHub discussions](https://github.com/pomelo-la/go-toolkit/discussions) - For ideas, RFCs & general questions
+* [GitHub issues](https://github.com/pomelo-la/go-toolkit/issues/new/choose) – For bug reports & feature requests
+* [Usage examples](./_examples)
 
-```shell
-brew install gum
+### Contributing
 
-# after gum installed
-make createpkg
-```
-
-You are more than welcome, please read our contribution guidelines.
-
-- [Code Of Conduct](./code-of-conduct.md)
-- [Contributing guidelines](./CONTRIBUTING.md)
-
-Happy coding
+If you are interested in contributing to the SDK, please take a look at [CONTRIBUTING](./CONTRIBUTING.md)
