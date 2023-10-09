@@ -22,22 +22,37 @@ func New(optFns ...func(opts *Config)) (*aws.Config, error) {
 		opts.Region = _defaultAwsRegion
 	}
 
-	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-		if opts.Endpoint != "" {
-			return aws.Endpoint{
-				PartitionID:   "aws",
-				URL:           opts.Endpoint,
-				SigningRegion: opts.Region,
-			}, nil
+	if opts.Endpoint != "" {
+		cfg, err := buildLocalStackAwsConfig(opts)
+		if err != nil {
+			return nil, err
 		}
 
-		return aws.Endpoint{}, nil
+		return cfg, nil
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion(opts.Region),
+	)
+	if err != nil {
+		return nil, ErrorLoadSdkConfig
+	}
+
+	return &cfg, nil
+}
+
+func buildLocalStackAwsConfig(opts Config) (*aws.Config, error) {
+	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+		return aws.Endpoint{
+			PartitionID:   "aws",
+			URL:           opts.Endpoint,
+			SigningRegion: opts.Region,
+		}, nil
 	})
 
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion(opts.Region),
 		config.WithEndpointResolverWithOptions(customResolver),
-		config.WithSharedConfigProfile(opts.Profile),
 	)
 	if err != nil {
 		return nil, ErrorLoadSdkConfig

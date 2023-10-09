@@ -35,7 +35,6 @@ func NewV1(optFns ...func(config *Config)) (*session.Session, error) {
 				Region:   awsv1.String(opts.Region),
 				Endpoint: awsv1.String(opts.Endpoint),
 			},
-			Profile: opts.Profile,
 		},
 	)
 	if err != nil {

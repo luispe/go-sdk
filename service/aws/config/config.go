@@ -6,8 +6,6 @@ var _defaultAwsRegion = "us-east-1"
 type Config struct {
 	// Endpoint specifies the endpoint override.
 	Endpoint string
-	// Profile specifies the aws profile to assume.
-	Profile string
 	// Region specifies the aws region.
 	Region string
 }
@@ -16,14 +14,6 @@ type Config struct {
 func WithEndpoint(endpointOverride string) func(*Config) {
 	return func(config *Config) {
 		config.Endpoint = endpointOverride
-	}
-}
-
-// WithProfile allows you to configure the profile which will have access to the
-// different aws services.
-func WithProfile(profile string) func(*Config) {
-	return func(config *Config) {
-		config.Profile = profile
 	}
 }
 

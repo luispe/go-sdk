@@ -48,7 +48,6 @@ func TestNewV1WithConfig(t *testing.T) {
 		got, err := cfg.NewV1(
 			cfg.WithEndpoint("http://localhost:4566"),
 			cfg.WithRegion("us-west-2"),
-			cfg.WithProfile("some-profile"),
 		)
 		assert.Equal(t, want.err, err)
 		if got != nil {
