@@ -64,6 +64,7 @@ func (s Subscriber) ReceiveMessage(ctx context.Context, optFns ...func(options *
 		MaxNumberOfMessages: opt.client.MaxNumberOfMessages,
 		WaitTimeSeconds:     opt.client.WaitTimeSeconds,
 		VisibilityTimeout:   opt.client.VisibilityTimeout,
+		QueueUrl:            aws.String(s.url),
 	})
 	if err != nil {
 		return nil, err
