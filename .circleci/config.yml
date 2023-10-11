@@ -1,0 +1,31 @@
+version: 2.1
+
+setup: true
+
+orbs:
+  ci: pomelo-la/ci@0
+  security-check-orb: pomelo-la/security-check-orb@3
+  path-filtering: circleci/path-filtering@1.0.0
+
+workflows:
+  always-run:
+    jobs:
+      # the path-filtering/filter job determines which pipeline
+      # parameters to update.
+      - path-filtering/filter:
+          name: check-updated-files
+          # 3-column, whitespace-delimited mapping. One mapping per
+          # line:
+          # <regex path-to-test> <parameter-to-set> <value-of-pipeline-parameter>
+          mapping: |
+            auth/.* run-auth-pkg-job true
+            log/.* run-log-pkg-job true
+            httprouter/.* run-httprouter-pkg-job true
+            service/aws/config/.* run-service-aws-config-pkg-job true
+            service/aws/sqs/.* run-service-aws-sqs-pkg-job true
+          base-revision: develop
+          # this is the path of the configuration we should trigger once
+          # path filtering and pipeline parameter value updates are
+          # complete. In this case, we are using the parent dynamic
+          # configuration itself.
+          config-path: .circleci/continue_config.yml
