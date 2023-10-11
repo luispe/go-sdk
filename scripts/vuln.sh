@@ -37,7 +37,7 @@ scanAuth
 scanAwsConfig
 scanAwsSqs
 
-if [[ -n "${my_array[*]}" ]]; then
+if [[ -n "${pkg_with_vuln[*]}" ]]; then
   echo "We found vulnerabilities in the following packages ${pkg_with_vuln[@]}"
   echo ""
   echo "Please go to the pkg(s) and update the dependencies, that's one way to solve it."
@@ -45,5 +45,3 @@ else
   echo ""
   echo "We not found vulnerabilities"
 fi
-
-
