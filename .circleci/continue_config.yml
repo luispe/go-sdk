@@ -129,7 +129,7 @@ workflows:
             - check-vulnerabilities
 
   service-aws-sqs-pkg:
-    when: << pipeline.parameters.service-aws-sqs-pkg >>
+    when: << pipeline.parameters.run-service-aws-sqs-pkg-job >>
     jobs:
       - lint:
           context: github-pomelo-la
