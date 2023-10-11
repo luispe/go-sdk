@@ -2,7 +2,7 @@
 
 Package `sqs` is a small wrapper around https://github.com/aws/aws-sdk-go-v2/tree/main/service/sqs
 
-Welcome to the aws/sqs user guide. Here we will guide you through some
+Welcome to the aws/sqs package user guide. Here we will guide you through some
 practical examples of how to interact with the API.
 
 # Getting started
