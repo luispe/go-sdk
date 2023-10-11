@@ -21,7 +21,6 @@ Use the api without any optional parameters.
 Using the optional API methods to configure region, profile and endpoint.
 
 	cfg, err := config.New(
-		config.WithProfile("my-profile"),
 		config.WithEndpoint("http://mycustomendpoint:1234"),
 		config.withRegion("us-west-2"),
 	)

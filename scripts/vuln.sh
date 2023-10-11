@@ -15,11 +15,10 @@ execute_script_in_directory() {
   cd $SCRIPT_DIR/..
 }
 
-PKGS=(auth service/aws/config service/aws/sqs)
 
-for pkg in "${PKGS[@]}"; do
-  execute_script_in_directory "$pkg"
-done
+execute_script_in_directory auth
+execute_script_in_directory service/aws/config
+execute_script_in_directory service/aws/sqs
 
 echo ""
 echo "We not found vulnerabilities"
