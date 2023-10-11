@@ -1,0 +1,143 @@
+version: 2.1
+
+orbs:
+  ci: pomelo-la/ci@0
+  docker: circleci/docker@2.0.1
+  sonarqube: pomelo-la/sonarqube@1
+  path-filtering: circleci/path-filtering@1.0.0
+
+parameters:
+  run-auth-pkg-job:
+    type: boolean
+    default: false
+  run-httprouter-pkg-job:
+    type: boolean
+    default: false
+  run-log-pkg-job:
+    type: boolean
+    default: false
+  run-service-aws-config-pkg-job:
+    type: boolean
+    default: false
+  run-service-aws-sqs-pkg-job:
+    type: boolean
+    default: false
+  pull-request-check:
+    type: boolean
+    default: false
+
+jobs:
+  run-tests:
+    docker:
+      - image: cimg/go:1.21
+    steps:
+      - checkout
+      - run:
+          name: Config GitHub credentials
+          command: git config --global url."https://x-access-token:$access_token@github.com/pomelo-la/".insteadOf "https://github.com/pomelo-la/"
+      - run:
+          name: Run tests
+          command: make test
+
+  lint:
+    docker:
+      - image: cimg/go:1.21
+    steps:
+      - checkout
+      - run:
+          name: Config GitHub credentials
+          command: git config --global url."https://x-access-token:$access_token@github.com/pomelo-la/".insteadOf "https://github.com/pomelo-la/"
+      - run:
+          command: make lint
+
+  check-vulnerabilities:
+    docker:
+      - image: cimg/go:1.21
+    steps:
+      - checkout
+      - run:
+          name: Config GitHub credentials
+          command: git config --global url."https://x-access-token:$access_token@github.com/pomelo-la/".insteadOf "https://github.com/pomelo-la/"
+      - run:
+          command: make vuln
+
+workflows:
+  validate-pull-request:
+    when:  <<pipeline.parameters.pull-request-check>>
+    jobs:
+      - lint:
+          context: github-pomelo-la
+      - run-tests:
+          context: github-pomelo-la
+          requires:
+            - lint
+
+  pkg-auth:
+    when: << pipeline.parameters.run-auth-pkg-job >>
+    jobs:
+      - lint:
+          context: github-pomelo-la
+      - check-vulnerabilities:
+          context: github-pomelo-la
+          requires:
+            - lint
+      - run-tests:
+          context: github-pomelo-la
+          requires:
+            - check-vulnerabilities
+
+  httprouter-pkg:
+    when: << pipeline.parameters.run-httprouter-pkg-job >>
+    jobs:
+      - lint:
+          context: github-pomelo-la
+      - check-vulnerabilities:
+          context: github-pomelo-la
+          requires:
+            - lint
+      - run-tests:
+          context: github-pomelo-la
+          requires:
+            - check-vulnerabilities
+
+  log-pkg:
+    when: << pipeline.parameters.run-log-pkg-job >>
+    jobs:
+      - lint:
+          context: github-pomelo-la
+      - check-vulnerabilities:
+          context: github-pomelo-la
+          requires:
+            - lint
+      - run-tests:
+          context: github-pomelo-la
+          requires:
+            - check-vulnerabilities
+
+  service-aws-config-pkg:
+    when: << pipeline.parameters.run-service-aws-config-pkg-job >>
+    jobs:
+      - lint:
+          context: github-pomelo-la
+      - check-vulnerabilities:
+          context: github-pomelo-la
+          requires:
+            - lint
+      - run-tests:
+          context: github-pomelo-la
+          requires:
+            - check-vulnerabilities
+
+  service-aws-sqs-pkg:
+    when: << pipeline.parameters.service-aws-sqs-pkg >>
+    jobs:
+      - lint:
+          context: github-pomelo-la
+      - check-vulnerabilities:
+          context: github-pomelo-la
+          requires:
+            - lint
+      - run-tests:
+          context: github-pomelo-la
+          requires:
+            - check-vulnerabilities
