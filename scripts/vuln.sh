@@ -1,47 +1,26 @@
 #!/bin/sh
 set -o errexit
 
-pkg_with_vuln=()
-
-function scanAuth() {
-  cd auth && go run golang.org/x/vuln/cmd/govulncheck@latest ./...
-  found=$?
-  if [ $found -ne 0 ]; then
-   pkg_with_vuln+=("auth")
-  fi
-
-  cd ..
+execute_script_in_directory() {
+  cd $1
+  go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+  FOUND=$?
+    if [ $FOUND -ne 0 ]; then
+       echo "We found vulnerabilities in the following packages ${1}"
+       echo ""
+       echo "Please go to the pkg(s) and update the dependencies, that's one way to solve it."
+       exit 1
+    fi
+  SCRIPT_DIR=$(dirname $0)
+  cd $SCRIPT_DIR/..
 }
 
-function scanAwsConfig() {
-  cd service/aws/config && go run golang.org/x/vuln/cmd/govulncheck@latest ./...
-  found=$?
-  if [ $found -ne 0 ]; then
-    pkg_with_vuln+=("service/aws/config")
-  fi
+PKGS=(auth service/aws/config service/aws/sqs)
 
-  cd ../../..
-}
+for pkg in "${PKGS[@]}"; do
+  execute_script_in_directory "$pkg"
+done
 
-function scanAwsSqs() {
-  cd service/aws/sqs && go run golang.org/x/vuln/cmd/govulncheck@latest ./...
-  found=$?
-  if [ $found -ne 0 ]; then
-    pkg_with_vuln+=("service/aws/sqs")
-  fi
-
-  cd ../../..
-}
-
-scanAuth
-scanAwsConfig
-scanAwsSqs
-
-if [[ -n "${pkg_with_vuln[*]}" ]]; then
-  echo "We found vulnerabilities in the following packages ${pkg_with_vuln[@]}"
-  echo ""
-  echo "Please go to the pkg(s) and update the dependencies, that's one way to solve it."
-else
-  echo ""
-  echo "We not found vulnerabilities"
-fi
+echo ""
+echo "We not found vulnerabilities"
+exit 0
