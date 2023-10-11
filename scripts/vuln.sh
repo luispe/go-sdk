@@ -1,5 +1,5 @@
-#!/bin/sh
-set -o errexit
+#!/bin/bash
+set -eo pipefail
 
 execute_script_in_directory() {
   cd $1
@@ -15,10 +15,11 @@ execute_script_in_directory() {
   cd $SCRIPT_DIR/..
 }
 
+PKGS=("auth" "service/aws/config" "service/aws/sqs")
 
-execute_script_in_directory auth
-execute_script_in_directory service/aws/config
-execute_script_in_directory service/aws/sqs
+for pkg in "${PKGS[@]}"; do
+  execute_script_in_directory "$pkg"
+done
 
 echo ""
 echo "We not found vulnerabilities"
