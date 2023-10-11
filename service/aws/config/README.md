@@ -15,4 +15,4 @@ go get github.com/pomelo-la/go-toolkit/service/aws/config
 ## Using service aws config
 
 The config package has two constructors, one for each version of the SDK. 
-Please review the [examples](../../../_examples/service/aws/config) for more information.
+Please review the [Usage examples](https://github.com/pomelo-la/go-toolkit-examples)
