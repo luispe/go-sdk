@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -88,7 +89,7 @@ func TestS3PutJSONObject(t *testing.T) {
 			ctrl, ctx := gomock.WithContext(context.Background(), t)
 			defer ctrl.Finish()
 
-			client := mock.NewDownloadUploader(ctrl)
+			client := mock.NewDeleteDownloadUploader(ctrl)
 			b, err := bucket.New(client, "some")
 			assert.NoError(t, err)
 
@@ -144,7 +145,7 @@ func TestS3PutJSONObjectWithKey(t *testing.T) {
 			ctrl, ctx := gomock.WithContext(context.Background(), t)
 			defer ctrl.Finish()
 
-			client := mock.NewDownloadUploader(ctrl)
+			client := mock.NewDeleteDownloadUploader(ctrl)
 			b, err := bucket.New(client, "some")
 			assert.NoError(t, err)
 
@@ -220,7 +221,7 @@ func TestS3PutObject(t *testing.T) {
 			ctrl, ctx := gomock.WithContext(context.Background(), t)
 			defer ctrl.Finish()
 
-			client := mock.NewDownloadUploader(ctrl)
+			client := mock.NewDeleteDownloadUploader(ctrl)
 			b, err := bucket.New(client, "some")
 			assert.NoError(t, err)
 
@@ -296,7 +297,7 @@ func TestS3PutObjectWithKey(t *testing.T) {
 			ctrl, ctx := gomock.WithContext(context.Background(), t)
 			defer ctrl.Finish()
 
-			client := mock.NewDownloadUploader(ctrl)
+			client := mock.NewDeleteDownloadUploader(ctrl)
 			b, err := bucket.New(client, "some")
 			assert.NoError(t, err)
 
@@ -369,7 +370,7 @@ func TestBucketDownloadFile(t *testing.T) {
 			ctrl, ctx := gomock.WithContext(context.Background(), t)
 			defer ctrl.Finish()
 
-			client := mock.NewDownloadUploader(ctrl)
+			client := mock.NewDeleteDownloadUploader(ctrl)
 			b, err := bucket.New(client, "some")
 			assert.NoError(t, err)
 
@@ -380,8 +381,85 @@ func TestBucketDownloadFile(t *testing.T) {
 					Times(1)
 			}
 
-			err = b.DownloadFile(ctx, tt.args.objectKey, tt.args.filename)
+			err = b.DownloadObject(ctx, tt.args.objectKey, tt.args.filename)
 			assert.Equal(t, tt.want.err, err)
+		})
+	}
+}
+
+func TestBucketDeleteObjects(t *testing.T) {
+	type args struct {
+		objectKeys []string
+	}
+	type mockS3Client struct {
+		output *s3.DeleteObjectsOutput
+		err    error
+	}
+	type expected struct {
+		output *s3.DeleteObjectsOutput
+		err    error
+	}
+
+	tests := []struct {
+		name         string
+		args         args
+		mockS3Client *mockS3Client
+		want         expected
+	}{
+		{
+			name:         "success",
+			args:         args{objectKeys: []string{"one", "two"}},
+			mockS3Client: &mockS3Client{output: &s3.DeleteObjectsOutput{Deleted: make([]types.DeletedObject, 2)}, err: nil},
+			want:         expected{output: &s3.DeleteObjectsOutput{Deleted: make([]types.DeletedObject, 2)}, err: nil},
+		},
+		{
+			name: "some objects failed to delete",
+			args: args{objectKeys: []string{"one", "two"}},
+			mockS3Client: &mockS3Client{
+				output: &s3.DeleteObjectsOutput{
+					Deleted: make([]types.DeletedObject, 1),
+					Errors:  make([]types.Error, 1),
+				},
+				err: nil,
+			},
+			want: expected{
+				output: &s3.DeleteObjectsOutput{
+					Deleted: make([]types.DeletedObject, 1),
+					Errors:  make([]types.Error, 1),
+				},
+				err: nil,
+			},
+		},
+		{
+			name:         "error",
+			args:         args{objectKeys: []string{"one", "two"}},
+			mockS3Client: &mockS3Client{output: nil, err: assert.AnError},
+			want:         expected{output: nil, err: assert.AnError},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl, ctx := gomock.WithContext(context.Background(), t)
+			defer ctrl.Finish()
+
+			client := mock.NewDeleteDownloadUploader(ctrl)
+			b, err := bucket.New(client, "some")
+			assert.NoError(t, err)
+
+			if tt.mockS3Client != nil {
+				client.EXPECT().
+					DeleteObjects(gomock.Any(), gomock.Any()).
+					Return(tt.mockS3Client.output, tt.mockS3Client.err).
+					Times(1)
+			}
+			got, err := b.DeleteObjects(ctx, tt.args.objectKeys...)
+			assert.Equal(t, tt.want.err, err)
+			assert.Equal(t, tt.want.output, got)
+			if got != nil {
+				assert.ElementsMatch(t, tt.want.output.Deleted, got.Deleted)
+				assert.ElementsMatch(t, tt.want.output.Errors, got.Errors)
+			}
 		})
 	}
 }
