@@ -22,14 +22,48 @@ parameters:
   run-service-aws-sqs-pkg-job:
     type: boolean
     default: false
+  run-service-aws-s3-pkg-job:
+    type: boolean
+    default: false
   pull-request-check:
     type: boolean
     default: false
 
 jobs:
+  check-vulnerabilities:
+    docker:
+      - image: cimg/go:1.21
+    parameters:
+      pgk_name:
+        type: string
+    steps:
+      - checkout
+      - run:
+          name: Config GitHub credentials
+          command: git config --global url."https://x-access-token:$access_token@github.com/pomelo-la/".insteadOf "https://github.com/pomelo-la/"
+      - run:
+          command: make vuln PKG_NAME=<<parameters.pgk_name>>
+
+  lint:
+    docker:
+      - image: cimg/go:1.21
+    parameters:
+      pgk_name:
+        type: string
+    steps:
+      - checkout
+      - run:
+          name: Config GitHub credentials
+          command: git config --global url."https://x-access-token:$access_token@github.com/pomelo-la/".insteadOf "https://github.com/pomelo-la/"
+      - run:
+          command: make lint PKG_NAME=<<parameters.pgk_name>>
+
   run-tests:
     docker:
       - image: cimg/go:1.21
+    parameters:
+      pgk_name:
+        type: string
     steps:
       - checkout
       - run:
@@ -37,107 +71,151 @@ jobs:
           command: git config --global url."https://x-access-token:$access_token@github.com/pomelo-la/".insteadOf "https://github.com/pomelo-la/"
       - run:
           name: Run tests
-          command: make test
+          command: make test PKG_NAME=<<parameters.pgk_name>>
 
-  lint:
+  static-checks:
     docker:
       - image: cimg/go:1.21
+    parameters:
+      pgk_name:
+        type: string
     steps:
       - checkout
       - run:
           name: Config GitHub credentials
           command: git config --global url."https://x-access-token:$access_token@github.com/pomelo-la/".insteadOf "https://github.com/pomelo-la/"
       - run:
-          command: make lint
-
-  check-vulnerabilities:
-    docker:
-      - image: cimg/go:1.21
-    steps:
-      - checkout
-      - run:
-          name: Config GitHub credentials
-          command: git config --global url."https://x-access-token:$access_token@github.com/pomelo-la/".insteadOf "https://github.com/pomelo-la/"
-      - run:
-          command: make vuln
+          command: make static_checks PKG_NAME=<<parameters.pgk_name>>
 
 workflows:
-  validate-pull-request:
-    when:  <<pipeline.parameters.pull-request-check>>
-    jobs:
-      - lint:
-          context: github-pomelo-la
-      - run-tests:
-          context: github-pomelo-la
-          requires:
-            - lint
-
   pkg-auth:
     when: << pipeline.parameters.run-auth-pkg-job >>
     jobs:
+      - static-checks:
+          context: github-pomelo-la
+          pgk_name: "auth"
       - lint:
           context: github-pomelo-la
+          pgk_name: "auth"
+          requires:
+            - static-checks
       - check-vulnerabilities:
           context: github-pomelo-la
+          pgk_name: "auth"
           requires:
             - lint
       - run-tests:
           context: github-pomelo-la
+          pgk_name: "auth"
           requires:
             - check-vulnerabilities
 
   httprouter-pkg:
     when: << pipeline.parameters.run-httprouter-pkg-job >>
     jobs:
+      - static-checks:
+          context: github-pomelo-la
+          pgk_name: "httprouter"
       - lint:
           context: github-pomelo-la
+          pgk_name: "httprouter"
+          requires:
+            - static-checks
       - check-vulnerabilities:
           context: github-pomelo-la
+          pgk_name: "httprouter"
           requires:
             - lint
       - run-tests:
           context: github-pomelo-la
+          pgk_name: "httprouter"
           requires:
             - check-vulnerabilities
 
   log-pkg:
     when: << pipeline.parameters.run-log-pkg-job >>
     jobs:
+      - static-checks:
+          context: github-pomelo-la
+          pgk_name: "log"
       - lint:
           context: github-pomelo-la
+          pgk_name: "log"
+          requires:
+            - static-checks
       - check-vulnerabilities:
           context: github-pomelo-la
+          pgk_name: "log"
           requires:
             - lint
       - run-tests:
           context: github-pomelo-la
+          pgk_name: "log"
           requires:
             - check-vulnerabilities
 
   service-aws-config-pkg:
     when: << pipeline.parameters.run-service-aws-config-pkg-job >>
     jobs:
+      - static-checks:
+          context: github-pomelo-la
+          pgk_name: "service/aws/config"
       - lint:
           context: github-pomelo-la
+          pgk_name: "service/aws/config"
+          requires:
+            - static-checks
       - check-vulnerabilities:
           context: github-pomelo-la
+          pgk_name: "service/aws/config"
           requires:
             - lint
       - run-tests:
           context: github-pomelo-la
+          pgk_name: "service/aws/config"
           requires:
             - check-vulnerabilities
 
   service-aws-sqs-pkg:
     when: << pipeline.parameters.run-service-aws-sqs-pkg-job >>
     jobs:
+      - static-checks:
+          context: github-pomelo-la
+          pgk_name: "service/aws/sqs"
       - lint:
           context: github-pomelo-la
+          pgk_name: "service/aws/sqs"
+          requires:
+            - static-checks
       - check-vulnerabilities:
           context: github-pomelo-la
+          pgk_name: "service/aws/sqs"
           requires:
             - lint
       - run-tests:
           context: github-pomelo-la
+          pgk_name: "service/aws/sqs"
+          requires:
+            - check-vulnerabilities
+
+  service-aws-s3-pkg:
+    when: << pipeline.parameters.run-service-aws-s3-pkg-job >>
+    jobs:
+      - static-checks:
+          context: github-pomelo-la
+          pgk_name: "service/aws/s3"
+      - lint:
+          context: github-pomelo-la
+          pgk_name: "service/aws/s3"
+          requires:
+            - static-checks
+      - check-vulnerabilities:
+          context: github-pomelo-la
+          pgk_name: "service/aws/s3"
+          requires:
+            - lint
+      - run-tests:
+          context: github-pomelo-la
+          pgk_name: "service/aws/s3"
           requires:
             - check-vulnerabilities

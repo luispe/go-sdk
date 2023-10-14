@@ -23,6 +23,7 @@ workflows:
             httprouter/.* run-httprouter-pkg-job true
             service/aws/config/.* run-service-aws-config-pkg-job true
             service/aws/sqs/.* run-service-aws-sqs-pkg-job true
+            service/aws/s3/.* run-service-aws-s3-pkg-job true
           base-revision: develop
           # this is the path of the configuration we should trigger once
           # path filtering and pipeline parameter value updates are

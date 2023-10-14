@@ -27,18 +27,21 @@ gofmt: ## Format project using gofmt and gofumpt
 
 ## Test:
 test: ## Run the tests of the project
-	"$(CURDIR)/scripts/unit_test.sh"
+	"$(CURDIR)/scripts/unit_test.sh" $(PKG_NAME)
 
 coverage: ## Run the tests of the project and export the coverage
 	"$(CURDIR)/scripts/coverage.sh"
 
-## Lint:
+## Analyst:
 lint: ## Run lint on your project
 	"$(CURDIR)/scripts/linter.sh"
 
+static_checks: ## Run static check and go vet on your project
+	"$(CURDIR)/scripts/static_check.sh" $(PKG_NAME)
+
 ## Security:
 vuln: ## Scan vulnerabilities
-	"$(CURDIR)/scripts/vuln.sh"
+	"$(CURDIR)/scripts/vuln.sh" $(PKG_NAME)
 
 ## Help:
 help: ## Show this help.
