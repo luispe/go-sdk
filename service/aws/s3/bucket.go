@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -98,6 +99,47 @@ func (b Bucket) PutObject(ctx context.Context, filename string, optFns ...func(*
 	}
 
 	return output, nil
+}
+
+// DownloadFile retrieves object from aws S3 bucket.
+func (b Bucket) DownloadFile(ctx context.Context, objectKey, fileName string) error {
+	result, err := b.downloadUploader.GetObject(ctx, &s3.GetObjectInput{
+		Key:    aws.String(objectKey),
+		Bucket: aws.String(b.name),
+	})
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err := result.Body.Close()
+		if err != nil {
+			fmt.Println("go-toolkit service/aws/s3 unable to close result GetObject")
+		}
+	}()
+
+	file, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			fmt.Println("go-toolkit service/aws/s3 unable to close the file")
+		}
+	}()
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Write(body)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Options holds the options for interact to Bucket.

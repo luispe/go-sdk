@@ -24,6 +24,6 @@ type Uploader interface {
 
 // Downloader is an interface that wraps the basic GetObject methods.
 type Downloader interface {
-	// GetObject retrieves objects from aws S3 bucket.
+	// GetObject retrieves object from aws S3 bucket.
 	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
 }

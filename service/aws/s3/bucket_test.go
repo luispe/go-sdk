@@ -2,7 +2,9 @@ package s3_test
 
 import (
 	"context"
+	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -308,6 +310,78 @@ func TestS3PutObjectWithKey(t *testing.T) {
 			got, err := b.PutObject(ctx, tt.args.filename, bucket.WithKey("my-key"))
 			assert.Equal(t, tt.want.err, err)
 			assert.Equal(t, tt.want.output, got)
+		})
+	}
+}
+
+func TestBucketDownloadFile(t *testing.T) {
+	tempEnvFile := "test.txt"
+	f, err := os.Create(tempEnvFile)
+	if err != nil {
+		t.Fatalf("Failed to create temporary test.txt file: %v", err)
+	}
+	defer os.Remove(tempEnvFile)
+	defer f.Close()
+
+	// Write test environment variables to the temporary .env file
+	envData := []byte(`
+		some-content
+	`)
+	_, err = f.Write(envData)
+	assert.NoError(t, err)
+
+	type args struct {
+		objectKey, filename string
+	}
+	type mockS3Client struct {
+		output *s3.GetObjectOutput
+		err    error
+	}
+	type expected struct {
+		err error
+	}
+
+	tests := []struct {
+		name         string
+		args         args
+		mockS3Client *mockS3Client
+		want         expected
+	}{
+		{
+			name: "success",
+			args: args{objectKey: "test.txt", filename: "test.txt"},
+			mockS3Client: &mockS3Client{
+				output: &s3.GetObjectOutput{Body: io.NopCloser(strings.NewReader("my-file"))},
+				err:    nil,
+			},
+			want: expected{err: nil},
+		},
+		{
+			name:         "error download object",
+			args:         args{filename: "test.txt"},
+			mockS3Client: &mockS3Client{output: nil, err: assert.AnError},
+			want:         expected{err: assert.AnError},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl, ctx := gomock.WithContext(context.Background(), t)
+			defer ctrl.Finish()
+
+			client := mock.NewDownloadUploader(ctrl)
+			b, err := bucket.New(client, "some")
+			assert.NoError(t, err)
+
+			if tt.mockS3Client != nil {
+				client.EXPECT().
+					GetObject(gomock.Any(), gomock.Any()).
+					Return(tt.mockS3Client.output, tt.mockS3Client.err).
+					Times(1)
+			}
+
+			err = b.DownloadFile(ctx, tt.args.objectKey, tt.args.filename)
+			assert.Equal(t, tt.want.err, err)
 		})
 	}
 }
