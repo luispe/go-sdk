@@ -1,5 +1,7 @@
 # Welcome to the go-toolkit!
-This repository contains many go packages, including:
+[![pomelo-la](https://circleci.com/gh/pomelo-la/go-toolkit.svg?style=svg&circle-token=0bcd049e9a006ffd2a02fc7ab52e99564f68dac1)](https://circleci.com/gh/pomelo-la/go-toolkit)
+
+This repository contains many go packages:
 
 - [auth](./auth)
 - [httprouter](./httprouter)
@@ -7,13 +9,17 @@ This repository contains many go packages, including:
 - aws services
   - [config](./service/aws/config)
   - [sqs](./service/aws/sqs)
-- ... and more
+  - [s3](./service/aws/s3)
 
-This monorepo was created to improve collaboration and productivity between `Platform Core`. 
+
+This monorepo was created to improve collaboration and productivity between developers.
 By having all our code in one place, we can share ideas, find bugs and fix them more easily.
 
-> It is not a framework but rather a set of simple utilities that 
-> can be used independently of each other
+> Vision
+>
+> These packages provide "plumbing" primitives for creating web applications.
+> 
+> It is not a framework but rather a set of simple utilities that can be used independently of each other.
 
 ## Getting started
 
