@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/pomelo-la/go-toolkit/httprouter"
@@ -46,7 +47,12 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -59,7 +65,8 @@ func TestRun(t *testing.T) {
 
 	// Server is up. We are ready to send a kill signal
 	require.Equal(t, http.StatusOK, resp.StatusCode)
-	syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+	err = syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+	assert.NoError(t, err)
 
 	select {
 	case err := <-serverErr:
@@ -157,7 +164,12 @@ func TestRunTLS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -170,7 +182,8 @@ func TestRunTLS(t *testing.T) {
 
 	// Server is up. We are ready to send a kill signal
 	require.Equal(t, http.StatusOK, resp.StatusCode)
-	syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+	err = syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+	assert.NoError(t, err)
 
 	select {
 	case err := <-serverErr:
