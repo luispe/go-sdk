@@ -1,11 +1,9 @@
-package middleware
+package httprouter
 
 import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5/middleware"
-
-	"github.com/pomelo-la/go-toolkit/httprouter"
 )
 
 // BreakerValidator is a function that determines if a status code written to a
@@ -27,7 +25,7 @@ type CircuitBreaker interface {
 // BreakerValidator. Responses written by the next Handler whose status codes
 // fail the validator signal failures to the breaker. Once the breaker opens,
 // incoming requests are terminated before being answered with HTTP 503.
-func Breaker(cb CircuitBreaker, validator BreakerValidator) httprouter.Middleware {
+func Breaker(cb CircuitBreaker, validator BreakerValidator) Middleware {
 	return func(handler http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			if !cb.Allow() {

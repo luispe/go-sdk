@@ -1,4 +1,4 @@
-package middleware_test
+package httprouter_test
 
 import (
 	"net/http"
@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/pomelo-la/go-toolkit/httprouter"
-	"github.com/pomelo-la/go-toolkit/httprouter/middleware"
 )
 
 type breaker struct{ mock.Mock }
@@ -75,7 +74,7 @@ func TestMidBreaker(t *testing.T) {
 				w.WriteHeader(tt.HandlerStatus)
 				return nil
 			}
-			mdl := middleware.Breaker(&cb, middleware.DefaultBreakerValidator)
+			mdl := httprouter.Breaker(&cb, httprouter.DefaultBreakerValidator)
 
 			app.Method(http.MethodGet, "/", handler, mdl)
 

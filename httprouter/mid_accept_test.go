@@ -1,4 +1,4 @@
-package middleware_test
+package httprouter_test
 
 import (
 	"net/http"
@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/pomelo-la/go-toolkit/httprouter"
-	"github.com/pomelo-la/go-toolkit/httprouter/middleware"
 )
 
 func TestAcceptHeaderMid(t *testing.T) {
@@ -16,7 +15,7 @@ func TestAcceptHeaderMid(t *testing.T) {
 	app.Method(http.MethodGet, "/",
 		func(w http.ResponseWriter, r *http.Request) error {
 			return nil
-		}, middleware.Accept("^.+/json", "image/*"))
+		}, httprouter.Accept("^.+/json", "image/*"))
 
 	tests := []struct {
 		mt         string
@@ -69,7 +68,7 @@ func TestMatchJSONAcceptHeader(t *testing.T) {
 	app.Method(http.MethodGet, "/",
 		func(w http.ResponseWriter, r *http.Request) error {
 			return nil
-		}, middleware.AcceptJSON())
+		}, httprouter.AcceptJSON())
 
 	tests := []struct {
 		mt         string

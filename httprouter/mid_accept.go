@@ -1,19 +1,17 @@
-package middleware
+package httprouter
 
 import (
 	"mime"
 	"net/http"
 	"regexp"
 	"strings"
-
-	"github.com/pomelo-la/go-toolkit/httprouter"
 )
 
 const _all = "*/*"
 
 // AcceptJSON makes only application/json, */* or empty Accept header values
 // acceptable requests. The rest will get a NotAcceptable response.
-func AcceptJSON() httprouter.Middleware {
+func AcceptJSON() Middleware {
 	return Accept("^application/json$")
 }
 
@@ -23,7 +21,7 @@ func AcceptJSON() httprouter.Middleware {
 //
 // Example:
 // app.Router.Get("/",handler,web.Accept("^image/.+","^application/pdf*")).
-func Accept(mediaTypes ...string) httprouter.Middleware {
+func Accept(mediaTypes ...string) Middleware {
 	compiled := make([]*regexp.Regexp, len(mediaTypes))
 	for i := 0; i < len(mediaTypes); i++ {
 		compiled[i] = regexp.MustCompile(mediaTypes[i])
