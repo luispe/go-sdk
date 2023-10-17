@@ -7,29 +7,21 @@ import (
 	"strings"
 )
 
-const _all = "*/*"
+const allMediaTypes = "*/*"
 
-// AcceptJSON makes only application/json, */* or empty Accept header values
-// acceptable requests. The rest will get a NotAcceptable response.
+// AcceptJSON returns middleware that allows requests with "application/json" or an empty Accept header.
+// It responds with a NotAcceptable status for other media types.
 func AcceptJSON() Middleware {
 	return Accept("^application/json$")
 }
 
-// Accept makes acceptable any request whose Accept header
-// matches any of the mediaTypes regular expressions.
-// This function will panic if any of the mediaTypes expressions is not valid.
-//
-// Example:
-// app.Router.Get("/",handler,web.Accept("^image/.+","^application/pdf*")).
+// Accept creates middleware that allows requests with specified media types.
 func Accept(mediaTypes ...string) Middleware {
-	compiled := make([]*regexp.Regexp, len(mediaTypes))
-	for i := 0; i < len(mediaTypes); i++ {
-		compiled[i] = regexp.MustCompile(mediaTypes[i])
-	}
+	compiled := compileMediaTypes(mediaTypes)
 
 	return func(handler http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			if !acceptable(r.Header.Get("Accept"), compiled) {
+			if !isAcceptableRequest(r.Header.Get("Accept"), compiled) {
 				w.WriteHeader(http.StatusNotAcceptable)
 				return
 			}
@@ -38,29 +30,52 @@ func Accept(mediaTypes ...string) Middleware {
 	}
 }
 
-func acceptable(accept string, mediaTypes []*regexp.Regexp) bool {
-	if accept == "" || accept == _all {
-		// The absence of an Accept header is equivalent to "*/*".
-		// https://tools.ietf.org/html/rfc2296#section-4.2.2
+func compileMediaTypes(mediaTypes []string) []*regexp.Regexp {
+	compiled := make([]*regexp.Regexp, len(mediaTypes))
+	for i, mediaType := range mediaTypes {
+		compiled[i] = regexp.MustCompile(mediaType)
+	}
+	return compiled
+}
+
+//revive:disable:cognitive-complexity High complexity score but easy to understand
+func isAcceptableRequest(acceptHeader string, mediaTypes []*regexp.Regexp) bool {
+	if acceptHeader == "" || acceptHeader == allMediaTypes {
 		return true
 	}
 
-	for _, a := range strings.Split(accept, ",") {
-		mediaType, _, err := mime.ParseMediaType(a)
-		if err != nil {
-			continue
-		}
+	acceptedMediaTypes := parseAcceptHeader(acceptHeader)
+	if containsWildcard(acceptedMediaTypes...) {
+		return true
+	}
 
-		if mediaType == _all {
-			return true
-		}
-
+	for _, accepted := range acceptedMediaTypes {
 		for _, t := range mediaTypes {
-			if t.MatchString(mediaType) {
+			if t.MatchString(accepted) {
 				return true
 			}
 		}
 	}
 
+	return false
+}
+
+func parseAcceptHeader(acceptHeader string) []string {
+	var accepted []string
+	for _, a := range strings.Split(acceptHeader, ",") {
+		mediaType, _, err := mime.ParseMediaType(a)
+		if err == nil {
+			accepted = append(accepted, mediaType)
+		}
+	}
+	return accepted
+}
+
+func containsWildcard(mediaTypes ...string) bool {
+	for _, mediaType := range mediaTypes {
+		if mediaType == allMediaTypes {
+			return true
+		}
+	}
 	return false
 }

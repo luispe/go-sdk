@@ -15,9 +15,18 @@ type BreakerValidator func(int) bool
 // success, from the perspective of a server. All other codes are failures.
 func DefaultBreakerValidator(code int) bool { return code < 500 }
 
+// CircuitBreaker represents a circuit breaker that can be used to control the flow of requests.
 type CircuitBreaker interface {
+	// Allow checks if a request is allowed to proceed.
+	// Returns true if the request is allowed, false otherwise.
 	Allow() bool
+
+	// Success signals a successful request to the circuit breaker.
+	// This can be used to update internal metrics or state.
 	Success()
+
+	// Failure signals a failed request to the circuit breaker.
+	// This can be used to update internal metrics or state.
 	Failure()
 }
 
