@@ -31,7 +31,7 @@ func TestRun(t *testing.T) {
 
 	serverErr := make(chan error, 1)
 	go func() {
-		serverErr <- httprouter.Run(ln, http.HandlerFunc(h))
+		serverErr <- httprouter.Run(ln, httprouter.DefaultTimeouts, http.HandlerFunc(h))
 	}()
 
 	// Before killing the app with a SIGTERM we need to make sure the server is up and running.
@@ -135,7 +135,7 @@ func TestRunTLS(t *testing.T) {
 
 	serverErr := make(chan error, 1)
 	go func() {
-		serverErr <- httprouter.RunTLS(ln, http.HandlerFunc(h), tlsConfig)
+		serverErr <- httprouter.RunTLS(ln, httprouter.DefaultTimeouts, http.HandlerFunc(h), tlsConfig)
 	}()
 
 	certificate, err := x509.ParseCertificate(tlsConfig.Certificates[0].Certificate[0])

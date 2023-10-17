@@ -12,16 +12,10 @@ import (
 	"time"
 )
 
-const (
-	// _serverShutdownTimeouts is default sane timeouts for Run.
-	_serverShutdownTimeouts = 10 * time.Second
-	// _serverReadTimeout is default sane read timeout for Run.
-	_serverReadTimeout = 10 * time.Second
-	// _serverReadTimeout is default sane read header timeout for Run.
-	_serverReadHeaderTimeout = 5 * time.Second
-	// _serverWriteTimeout is default sane write timeout for Run.
-	_serverWriteTimeout = 10 * time.Second
-)
+// DefaultTimeouts exports sane timeouts for Run.
+var DefaultTimeouts = Timeouts{
+	ShutdownTimeout: 10 * time.Second,
+}
 
 // Timeouts struct define different timeouts that Run takes into consideration
 // when running the web server.
@@ -56,70 +50,34 @@ type Timeouts struct {
 
 // Run executes the given handler h on the given net.Listener ln with the given
 // timeouts. It blocks until SIGTERM o SIGINT is received by the running process.
-func Run(ln net.Listener, h http.Handler, optFns ...func(*Timeouts)) error {
-	var opt Timeouts
-	for _, fn := range optFns {
-		fn(&opt)
-	}
-
-	if opt.ReadTimeout <= 0 {
-		opt.ReadTimeout = _serverReadTimeout
-	}
-	if opt.ReadHeaderTimeout <= 0 {
-		opt.ReadHeaderTimeout = _serverReadHeaderTimeout
-	}
-	if opt.WriteTimeout <= 0 {
-		opt.WriteTimeout = _serverWriteTimeout
-	}
-	if opt.ShutdownTimeout <= 0 {
-		opt.ShutdownTimeout = _serverShutdownTimeouts
-	}
-
+func Run(ln net.Listener, timeouts Timeouts, h http.Handler) error {
 	// Create a new server and set timeout values.
 	server := http.Server{
-		ReadTimeout:       opt.ReadTimeout,
-		ReadHeaderTimeout: opt.ReadHeaderTimeout,
-		WriteTimeout:      opt.WriteTimeout,
+		ReadTimeout:       timeouts.ReadTimeout,
+		ReadHeaderTimeout: timeouts.ReadHeaderTimeout,
+		WriteTimeout:      timeouts.WriteTimeout,
 		Handler:           h,
 	}
 
-	return run(&server, opt.ShutdownTimeout, ln, false)
+	return run(&server, timeouts.ShutdownTimeout, ln, false)
 }
 
 // RunTLS executes the given handler h on the given net.Listener ln with the given
 // timeouts and tlsConfig. It blocks until SIGTERM o SIGINT is received by the running process.
-func RunTLS(ln net.Listener, h http.Handler, tlsConfig *tls.Config, optFns ...func(*Timeouts)) error {
-	var opt Timeouts
-	for _, fn := range optFns {
-		fn(&opt)
-	}
-
-	if opt.ReadTimeout <= 0 {
-		opt.ReadTimeout = _serverReadTimeout
-	}
-	if opt.ReadHeaderTimeout <= 0 {
-		opt.ReadHeaderTimeout = _serverReadHeaderTimeout
-	}
-	if opt.WriteTimeout <= 0 {
-		opt.WriteTimeout = _serverWriteTimeout
-	}
-	if opt.ShutdownTimeout <= 0 {
-		opt.ShutdownTimeout = _serverShutdownTimeouts
-	}
-
+func RunTLS(ln net.Listener, timeouts Timeouts, h http.Handler, tlsConfig *tls.Config) error {
 	// Create a new server and set timeout values and tlsConfig.
 	server := http.Server{
-		ReadTimeout:       opt.ReadTimeout,
-		ReadHeaderTimeout: opt.ReadHeaderTimeout,
-		WriteTimeout:      opt.WriteTimeout,
+		ReadTimeout:       timeouts.ReadTimeout,
+		ReadHeaderTimeout: timeouts.ReadHeaderTimeout,
+		WriteTimeout:      timeouts.WriteTimeout,
 		Handler:           h,
 		TLSConfig:         tlsConfig,
 	}
 
-	return run(&server, opt.ShutdownTimeout, ln, true)
+	return run(&server, timeouts.ShutdownTimeout, ln, true)
 }
 
-func run(server *http.Server, shutdownTimout time.Duration, ln net.Listener, serveTLS bool) error {
+func run(server *http.Server, shutdownTimeout time.Duration, ln net.Listener, serveTLS bool) error {
 	// Make a channel to listen for errors coming from the listener. Use a
 	// buffered channel so the goroutine can exit if we don't collect this error.
 	serverErrors := make(chan error, 1)
@@ -144,7 +102,7 @@ func run(server *http.Server, shutdownTimout time.Duration, ln net.Listener, ser
 		return fmt.Errorf("error in serve: %w", err)
 	case <-shutdown:
 		// Give outstanding requests a deadline for completion.
-		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimout)
+		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
 
 		// Asking listener to shut down and shed load.
