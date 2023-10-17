@@ -36,10 +36,11 @@ func wrapMiddleware(handler http.HandlerFunc, mw []Middleware) http.HandlerFunc 
 
 // Config allows configuring a Router instance.
 type Config struct {
-	ErrorHandlerFunc   ErrorHandlerFunc
-	NotFoundHandler    http.Handler
-	HealthCheckHandler http.Handler
-	EnableProfiler     bool
+	ErrorHandlerFunc            ErrorHandlerFunc
+	NotFoundHandler             http.Handler
+	HealthCheckLivenessHandler  http.Handler
+	HealthCheckReadinessHandler http.Handler
+	EnableProfiler              bool
 
 	Mw []Middleware
 }
@@ -60,9 +61,12 @@ func New(cfg Config) *Router {
 		mux.NotFound(cfg.NotFoundHandler.ServeHTTP)
 	}
 
-	if cfg.HealthCheckHandler != nil {
-		mux.Get("/liveness", cfg.HealthCheckHandler.ServeHTTP)
-		mux.Get("/readiness", cfg.HealthCheckHandler.ServeHTTP)
+	if cfg.HealthCheckLivenessHandler != nil {
+		mux.Get("/liveness", cfg.HealthCheckLivenessHandler.ServeHTTP)
+	}
+
+	if cfg.HealthCheckReadinessHandler != nil {
+		mux.Get("/readiness", cfg.HealthCheckReadinessHandler.ServeHTTP)
 	}
 
 	if cfg.EnableProfiler {

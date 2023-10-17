@@ -26,7 +26,7 @@ func TestNewConfigHandlers(t *testing.T) {
 			name:     "liveness",
 			inputURL: "/liveness",
 			config: httprouter.Config{
-				HealthCheckHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				HealthCheckLivenessHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 					w.WriteHeader(http.StatusNoContent)
 				}),
 			},
@@ -37,7 +37,7 @@ func TestNewConfigHandlers(t *testing.T) {
 			name:     "readiness",
 			inputURL: "/readiness",
 			config: httprouter.Config{
-				HealthCheckHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				HealthCheckReadinessHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 					w.WriteHeader(http.StatusNoContent)
 				}),
 			},
