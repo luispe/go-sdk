@@ -38,7 +38,6 @@ func TestRun(t *testing.T) {
 	// We do so by retrying until we get a response from the underlying server.
 	c := http.Client{Timeout: 100 * time.Millisecond}
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d", ln.Addr().(*net.TCPAddr).Port), nil)
-
 	if err != nil {
 		t.Fatal(err)
 	}
