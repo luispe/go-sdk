@@ -14,7 +14,7 @@ Use the api without any optional parameters.
 
 		cfg, err := config.New()
 	    if err != nil {
-	        logger.Fatalf("unable to load aws SDK config, %v", err)
+	        log.Fatalf("unable to load aws SDK config, %v", err)
 	    }
 		// ... use cfg to initialize some aws client service
 
@@ -25,7 +25,7 @@ Using the optional API methods to configure region, profile and endpoint.
 		config.withRegion("us-west-2"),
 	)
 	if err != nil {
-		logger.Fatalf("unable to load aws SDK config, %v", err)
+		log.Fatalf("unable to load aws SDK config, %v", err)
 	}
 	// ... use cfg to initialize some aws client service
 
@@ -35,7 +35,7 @@ Note that you can use an optional parameter, e.g:
 		config.withRegion("us-west-2"),
 	)
 	if err != nil {
-		logger.Fatalf("unable to load aws SDK config, %v", err)
+		log.Fatalf("unable to load aws SDK config, %v", err)
 	}
 	// ... use cfg to initialize some aws client service
 
@@ -45,7 +45,7 @@ You just have to change the name of the constructor to
 
 	    sess, err := config.NewV1ClientConfig()
 		if err != nil {
-			logger.Fatalf("unable to load aws SDK config, %v", err)
+			log.Fatalf("unable to load aws SDK config, %v", err)
 		}
 		// ... use sess to initialize some aws client service
 
