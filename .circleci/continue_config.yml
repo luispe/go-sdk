@@ -13,7 +13,7 @@ parameters:
   run-httprouter-pkg-job:
     type: boolean
     default: false
-  run-log-pkg-job:
+  run-logger-pkg-job:
     type: boolean
     default: false
   run-service-aws-config-pkg-job:
@@ -23,6 +23,9 @@ parameters:
     type: boolean
     default: false
   run-service-aws-s3-pkg-job:
+    type: boolean
+    default: false
+  run-telemetry-pkg-job:
     type: boolean
     default: false
   pull-request-check:
@@ -132,25 +135,25 @@ workflows:
           requires:
             - check-vulnerabilities
 
-  log-pkg:
-    when: << pipeline.parameters.run-log-pkg-job >>
+  logger-pkg:
+    when: << pipeline.parameters.run-logger-pkg-job >>
     jobs:
       - static-checks:
           context: github-pomelo-la
-          pgk_name: "log"
+          pgk_name: "logger"
       - lint:
           context: github-pomelo-la
-          pgk_name: "log"
+          pgk_name: "logger"
           requires:
             - static-checks
       - check-vulnerabilities:
           context: github-pomelo-la
-          pgk_name: "log"
+          pgk_name: "logger"
           requires:
             - lint
       - run-tests:
           context: github-pomelo-la
-          pgk_name: "log"
+          pgk_name: "logger"
           requires:
             - check-vulnerabilities
 
@@ -217,5 +220,27 @@ workflows:
       - run-tests:
           context: github-pomelo-la
           pgk_name: "service/aws/s3"
+          requires:
+            - check-vulnerabilities
+
+  telemetry-pkg:
+    when: << pipeline.parameters.run-telemetry-pkg-job >>
+    jobs:
+      - static-checks:
+          context: github-pomelo-la
+          pgk_name: "telemetry"
+      - lint:
+          context: github-pomelo-la
+          pgk_name: "telemetry"
+          requires:
+            - static-checks
+      - check-vulnerabilities:
+          context: github-pomelo-la
+          pgk_name: "telemetry"
+          requires:
+            - lint
+      - run-tests:
+          context: github-pomelo-la
+          pgk_name: "telemetry"
           requires:
             - check-vulnerabilities

@@ -6,6 +6,7 @@ This repository contains many go packages:
 - [auth](./auth)
 - [httprouter](./httprouter)
 - [log](./log)
+- [telemetry](./telemetry)
 - aws services
   - [config](./service/aws/config)
   - [sqs](./service/aws/sqs)
