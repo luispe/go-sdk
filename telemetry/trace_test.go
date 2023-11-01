@@ -108,8 +108,10 @@ func TestConfigShutdownTimeout(t *testing.T) {
 
 func TestAddSpan(t *testing.T) {
 	ctx := context.Background()
-
-	_, span := telemetry.AddSpan(ctx, "go-toolkit.telemetry", attribute.String("key1", "value1"))
+	trace, err := telemetry.NewTrace(ctx)
+	assert.NoError(t, err)
+	
+	_, span := trace.AddSpan(ctx, "go-toolkit.telemetry", attribute.String("key1", "value1"))
 	if span == nil {
 		t.Error("Expected a valid span, but got nil")
 	}

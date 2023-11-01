@@ -57,6 +57,21 @@ func NewTrace(ctx context.Context) (*Trace, error) {
 	return &Trace{trace: traceProvider}, nil
 }
 
+// AddSpan adds a OpenTelemetry span to the trace and context.
+func (tp Trace) AddSpan(ctx context.Context, spanName string, keyValues ...attribute.KeyValue) (context.Context, trace.Span) {
+	v, ok := ctx.Value(key).(*Values)
+	if !ok || v.Tracer == nil {
+		return ctx, trace.SpanFromContext(ctx)
+	}
+
+	ctx, span := v.Tracer.Start(ctx, spanName)
+	for _, kv := range keyValues {
+		span.SetAttributes(kv)
+	}
+
+	return ctx, span
+}
+
 // ShutdownTraceProvider shuts down the TraceProvider gracefully.
 func (tp Trace) ShutdownTraceProvider(ctx context.Context, optFns ...func(options *TraceOptions)) error {
 	var opt TraceOptions
@@ -85,19 +100,4 @@ func WithTraceShutdown(duration time.Duration) func(options *TraceOptions) {
 	return func(opt *TraceOptions) {
 		opt.shutdownTimeout = duration
 	}
-}
-
-// AddSpan adds a OpenTelemetry span to the trace and context.
-func AddSpan(ctx context.Context, spanName string, keyValues ...attribute.KeyValue) (context.Context, trace.Span) {
-	v, ok := ctx.Value(key).(*Values)
-	if !ok || v.Tracer == nil {
-		return ctx, trace.SpanFromContext(ctx)
-	}
-
-	ctx, span := v.Tracer.Start(ctx, spanName)
-	for _, kv := range keyValues {
-		span.SetAttributes(kv)
-	}
-
-	return ctx, span
 }
