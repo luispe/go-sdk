@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -100,4 +101,18 @@ func WithTraceShutdown(duration time.Duration) func(options *TraceOptions) {
 	return func(opt *TraceOptions) {
 		opt.shutdownTimeout = duration
 	}
+}
+
+var _patternReplacer = strings.NewReplacer(
+	"{", "_",
+	"}", "",
+)
+
+// SanitizeMetricTagValue sanitizes the given value in a standard way. It:
+//   - Trims suffix "/".
+//   - Replace "{" with "_"
+//   - Remove  "}".
+func SanitizeMetricTagValue(value string) string {
+	value = strings.TrimRight(value, "/")
+	return _patternReplacer.Replace(value)
 }
