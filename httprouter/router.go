@@ -119,7 +119,7 @@ func (r *Router) handlerAdapter(handler Handler) http.HandlerFunc {
 			span := trace.SpanFromContext(req.Context())
 			defer span.End()
 
-			notifyErr(req, err, hErr.StatusCode)
+			NotifyErr(req, err, hErr.StatusCode)
 		}
 
 		_ = RespondJSON(w, hErr.StatusCode, hErr.Error)

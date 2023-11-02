@@ -7,7 +7,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func notifyErr(r *http.Request, err error, statusCode int) {
+// NotifyErr notifies a tracer of an error that occurred while processing a request.
+func NotifyErr(r *http.Request, err error, statusCode int) {
 	tracer := trace.SpanFromContext(r.Context())
 
 	if tracer != nil {
