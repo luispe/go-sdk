@@ -119,9 +119,6 @@ func SanitizeMetricTagValue(value string) string {
 	return _patternReplacer.Replace(value)
 }
 
-// GetTraceID returns the trace ID associated with the given context.
-// If the context does not contain a trace ID, a new one is generated and returned.
-// The trace ID is returned as a string in its canonical form.
 func GetTraceID(ctx context.Context) (string, error) {
 	v, ok := ctx.Value(key).(*Values)
 	if ok {
