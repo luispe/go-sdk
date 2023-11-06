@@ -2,6 +2,8 @@ package telemetry
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"strings"
 	"time"
 
@@ -115,4 +117,59 @@ var _patternReplacer = strings.NewReplacer(
 func SanitizeMetricTagValue(value string) string {
 	value = strings.TrimRight(value, "/")
 	return _patternReplacer.Replace(value)
+}
+
+// GetTraceID returns the trace ID associated with the given context.
+// If the context does not contain a trace ID, a new one is generated and returned.
+// The trace ID is returned as a string in its canonical form.
+func GetTraceID(ctx context.Context) (string, error) {
+	v, ok := ctx.Value(key).(*Values)
+	if ok {
+		return v.TraceID, nil
+	}
+
+	id, err := generateTraceID()
+	if err != nil {
+		return "", err
+	}
+
+	traceID, err := trace.TraceIDFromHex(id)
+	if err != nil {
+		return "", err
+	}
+
+	return traceID.String(), nil
+}
+
+// GetValues returns the values from the context.
+func GetValues(ctx context.Context) (*Values, error) {
+	v, ok := ctx.Value(key).(*Values)
+	if ok {
+		return v, nil
+	}
+
+	id, err := generateTraceID()
+	if err != nil {
+		return nil, err
+	}
+
+	traceID, err := trace.TraceIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Values{
+		TraceID: traceID.String(),
+		Tracer:  trace.NewNoopTracerProvider().Tracer(""),
+		Now:     time.Now(),
+	}, nil
+}
+
+func generateTraceID() (string, error) {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }
