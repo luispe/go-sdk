@@ -36,7 +36,7 @@ const (
 	_defaultCompressionLevel = 5
 )
 
-var _defaultApplicationName = os.Getenv("SERVICE_NAME")
+var _defaultApplicationName = os.Getenv("OTEL_SERVICE_NAME")
 
 // Application is a container struct that contains all required base components
 // for building web applications.
@@ -50,6 +50,7 @@ type Application struct {
 	Meter   telemetry.Metric
 }
 
+// AppOptions represents the options for configuring a web application.
 type AppOptions struct {
 	ServerTimeouts httprouter.Timeouts
 	LogLevel       logger.Level
@@ -113,18 +114,9 @@ func WithEnvironmentRuntime(environment string) func(options *AppOptions) {
 
 // Run starts your Application, it blocks until os.Interrupt is received.
 func (a *Application) Run() error {
-	if a.config.Listener == nil {
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = _defaultWebApplicationPort
-		}
-
-		ln, err := net.Listen("tcp", ":"+port)
-		if err != nil {
-			return err
-		}
-
-		a.config.Listener = ln
+	err := a.configureListener()
+	if err != nil {
+		return err
 	}
 
 	a.Logger.Info(context.Background(), "http server listening")
@@ -149,6 +141,26 @@ func (a *Application) Run() error {
 	}
 
 	return a.Tracer.ShutdownTraceProvider(ctx)
+}
+
+func (a *Application) configureListener() error {
+	if a.config.Listener != nil {
+		return nil
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = _defaultWebApplicationPort
+	}
+
+	ln, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return err
+	}
+
+	a.config.Listener = ln
+
+	return nil
 }
 
 // printRoutes prints every route grouped by URL and http methods.
@@ -186,11 +198,7 @@ func (a *Application) printRoutes() error {
 	}
 
 	// Flush routes buffer
-	if err := w.Flush(); err != nil {
-		return err
-	}
-
-	return nil
+	return w.Flush()
 }
 
 // New instantiates a backend Application with sane defaults.
@@ -213,20 +221,7 @@ func New(optFns ...func(opts *AppOptions)) (*Application, error) {
 		}
 	}
 
-	var log *logger.Logger
-	events := logger.Events{
-		Error: func(ctx context.Context, r logger.Record) {
-			log.Info(ctx, "SEND ALERT")
-		},
-	}
-	traceIDFn := func(ctx context.Context) string {
-		traceID, err := telemetry.GetTraceID(ctx)
-		if err != nil {
-			return ""
-		}
-		return traceID
-	}
-	log = logger.NewWithEvents(os.Stdout, config.LogLevel, _defaultApplicationName, traceIDFn, events)
+	log := configureLogger(config)
 
 	if !strings.EqualFold(runtime.Environment, _defaultRuntimeEnvironment) {
 		tracer, err := telemetry.NewTrace(context.Background())
@@ -258,6 +253,24 @@ func New(optFns ...func(opts *AppOptions)) (*Application, error) {
 		Tracer:  telemetry.Trace{},
 		Meter:   telemetry.Metric{},
 	}, nil
+}
+
+func configureLogger(config AppOptions) *logger.Logger {
+	var log *logger.Logger
+	events := logger.Events{
+		Error: func(ctx context.Context, r logger.Record) {
+			log.Info(ctx, "SEND ALERT")
+		},
+	}
+	traceIDFn := func(ctx context.Context) string {
+		traceID, err := telemetry.GetTraceID(ctx)
+		if err != nil {
+			return ""
+		}
+		return traceID
+	}
+
+	return logger.NewWithEvents(os.Stdout, config.LogLevel, _defaultApplicationName, traceIDFn, events)
 }
 
 func configRuntime(opt AppOptions) (*Runtime, error) {
@@ -366,18 +379,12 @@ func panicsMiddleware(log logger.Logger) httprouter.Middleware {
 	return func(handler http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
-				if rvr := recover(); rvr != nil {
-					err, ok := rvr.(error)
-					if !ok {
-						err = fmt.Errorf("%v", rvr)
-					}
-
+				if err := recover(); err != nil {
 					log.Error(r.Context(), "panic recover")
 
 					statusCode := http.StatusInternalServerError
-
-					httprouter.NotifyErr(r, err, statusCode)
-					_ = httprouter.RespondJSON(w, statusCode, httprouter.NewErrorf(statusCode, err.Error()))
+					httprouter.NotifyErr(r, fmt.Errorf("%v", err), statusCode)
+					_ = httprouter.RespondJSON(w, statusCode, httprouter.NewErrorf(statusCode, fmt.Sprintf("%v", err)))
 				}
 			}()
 

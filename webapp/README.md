@@ -29,7 +29,7 @@ Please Configure the following environment variables for you webapp
 |-----------------------------------|--------------------------------|-----------|-------------------------------|
 | OTEL_SERVICE_NAME                 | your-service-name              | yes       |                               |
 | OTEL_EXPORTER_OTLP_HEADERS        | api-key=<newrelic_license_key> | yes       |                               |
-| OTEL_EXPORTER_OTLP_ENDPOINT       | https://otlp.nr-data.net:4317  | no        | https://otlp.nr-data.net:4317 |
+| OTEL_EXPORTER_OTLP_ENDPOINT       | https://otlp.nr-data.net:4317  | yes       | https://otlp.nr-data.net:4317 |
 | OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT | 4095                           | no        | 4095                          |
 | RUNTIME                           |                                | no        | local                         |
 | LOG_LEVEL                         |                                | no        | info                          |

@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// ErrMissingEnvironment is an error that represents the case when the RUNTIME environment variable is empty.
 var ErrMissingEnvironment = errors.New("RUNTIME env is empty")
 
 // Runtime struct is the parsed representation of the
