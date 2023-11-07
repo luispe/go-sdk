@@ -40,3 +40,19 @@ func toRecord(r slog.Record) Record {
 		Attributes: attrs,
 	}
 }
+
+// LevelToString converts a given Level value to its corresponding string representation.
+func (l Level) LevelToString() string {
+	switch {
+	case l == LevelDebug:
+		return "DEBUG"
+	case l == LevelInfo:
+		return "INFO"
+	case l == LevelWarn:
+		return "WARN"
+	case l == LevelError:
+		return "ERROR"
+	default:
+		return ""
+	}
+}
