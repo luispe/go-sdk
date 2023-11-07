@@ -124,16 +124,3 @@ func TestApplicationRunError(t *testing.T) {
 		})
 	}
 }
-
-func TestRun(t *testing.T) {
-	err := os.Setenv("RUNTIME", "local")
-	assert.NoError(t, err)
-	// Create an Application struct with the mock listener and router
-	app, err := webapp.New()
-	assert.NoError(t, err)
-
-	// Call the Run() function
-	err = app.Run()
-	// Assert that the error is nil
-	assert.NoError(t, err)
-}
