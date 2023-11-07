@@ -6,6 +6,7 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -34,6 +35,8 @@ const (
 	// The level should be one of the ones defined in the flat package.
 	// Higher levels typically run slower but compress more.
 	_defaultCompressionLevel = 5
+	_requestIDHeader         = "x-request-id"
+	_debugHeader             = "x-debug"
 )
 
 var _defaultApplicationName = os.Getenv("OTEL_SERVICE_NAME")
@@ -312,6 +315,7 @@ func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFun
 
 	mdwl := []httprouter.Middleware{
 		telemetryMiddleware(trace),
+		logMiddleware(log),
 		panicsMiddleware(log),
 		headerForwarder(trace),
 		newCompressor(),
@@ -327,6 +331,48 @@ func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFun
 	})
 }
 
+// headerForwarder decorates a request context with the value of certain headers
+// in order to allow transport.HTTPRequester to use those headers in outgoing requests.
+func headerForwarder(tracer telemetry.Trace) httprouter.Middleware {
+	return func(handler http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+
+			_, span := tracer.AddSpan(ctx, "HeaderForwarder")
+			defer span.End()
+
+			propagator := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
+			ctx = propagator.Extract(ctx, propagation.HeaderCarrier(r.Header))
+
+			span.AddEvent("HeaderForwarder processing")
+
+			r2 := r.WithContext(ctx)
+			handler(w, r2)
+		}
+	}
+}
+
+// log decorates the request context with the given logger, accessible via
+// the go-core log methods with context.
+func logMiddleware(log logger.Logger) httprouter.Middleware {
+	return func(handler http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path
+			if r.URL.RawQuery != "" {
+				path = fmt.Sprintf("%s?%s", path, r.URL.RawQuery)
+			}
+
+			log.Info(r.Context(), "request started",
+				slog.String("method", r.Method),
+				slog.String("path", path),
+				slog.String("remoteaddr", r.RemoteAddr),
+			)
+
+			handler(w, r)
+		}
+	}
+}
+
 // newCompressor returns a middleware that compresses response body of a given content type to a data format based
 // on Accept-Encoding request header. It uses the _defaultCompressionLevel.
 //
@@ -336,6 +382,27 @@ func newCompressor() httprouter.Middleware {
 	c := middleware.NewCompressor(_defaultCompressionLevel)
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return c.Handler(next).ServeHTTP
+	}
+}
+
+// panicsMiddleware handles any panic that may occur by notifying the error to an external telemetry system such NewRelic
+// and responding to the client with an `Error` and status code 500.
+// For this middleware to log, it requires the context to have a log.Logger.
+func panicsMiddleware(log logger.Logger) httprouter.Middleware {
+	return func(handler http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			defer func() {
+				if err := recover(); err != nil {
+					log.Error(r.Context(), "panic recover")
+
+					statusCode := http.StatusInternalServerError
+					httprouter.NotifyErr(r, fmt.Errorf("%v", err), statusCode)
+					_ = httprouter.RespondJSON(w, statusCode, httprouter.NewErrorf(statusCode, fmt.Sprintf("%v", err)))
+				}
+			}()
+
+			handler(w, r)
+		}
 	}
 }
 
@@ -368,48 +435,6 @@ func telemetryMiddleware(tracer telemetry.Trace) httprouter.Middleware {
 			start := time.Now()
 			handler(w2, r2)
 			recordRequest(r2.Context(), w2.Status(), time.Since(start), r.Method, routePattern)
-		}
-	}
-}
-
-// panicsMiddleware handles any panic that may occur by notifying the error to an external telemetry system such NewRelic
-// and responding to the client with an `Error` and status code 500.
-// For this middleware to log, it requires the context to have a log.Logger.
-func panicsMiddleware(log logger.Logger) httprouter.Middleware {
-	return func(handler http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			defer func() {
-				if err := recover(); err != nil {
-					log.Error(r.Context(), "panic recover")
-
-					statusCode := http.StatusInternalServerError
-					httprouter.NotifyErr(r, fmt.Errorf("%v", err), statusCode)
-					_ = httprouter.RespondJSON(w, statusCode, httprouter.NewErrorf(statusCode, fmt.Sprintf("%v", err)))
-				}
-			}()
-
-			handler(w, r)
-		}
-	}
-}
-
-// headerForwarder decorates a request context with the value of certain headers
-// in order to allow transport.HTTPRequester to use those headers in outgoing requests.
-func headerForwarder(tracer telemetry.Trace) httprouter.Middleware {
-	return func(handler http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
-
-			_, span := tracer.AddSpan(ctx, "HeaderForwarder")
-			defer span.End()
-
-			propagator := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
-			ctx = propagator.Extract(ctx, propagation.HeaderCarrier(r.Header))
-
-			span.AddEvent("HeaderForwarder processing")
-
-			r2 := r.WithContext(ctx)
-			handler(w, r2)
 		}
 	}
 }
