@@ -259,12 +259,6 @@ func New(optFns ...func(opts *AppOptions)) (*Application, error) {
 }
 
 func configureLogger(config AppOptions) *logger.Logger {
-	var log *logger.Logger
-	events := logger.Events{
-		Error: func(ctx context.Context, r logger.Record) {
-			log.Info(ctx, "SEND ALERT")
-		},
-	}
 	traceIDFn := func(ctx context.Context) string {
 		traceID, err := telemetry.GetTraceID(ctx)
 		if err != nil {
@@ -273,7 +267,7 @@ func configureLogger(config AppOptions) *logger.Logger {
 		return traceID
 	}
 
-	return logger.NewWithEvents(os.Stdout, config.LogLevel, _defaultApplicationName, traceIDFn, events)
+	return logger.New(os.Stdout, config.LogLevel, _defaultApplicationName, traceIDFn)
 }
 
 func configRuntime(opt AppOptions) (*Runtime, error) {
