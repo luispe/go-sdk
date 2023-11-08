@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -252,8 +253,6 @@ func New(optFns ...func(opts *AppOptions)) (*Application, error) {
 		Router:  router,
 		Runtime: *runtime,
 		Logger:  *log,
-		Tracer:  telemetry.Trace{},
-		Meter:   telemetry.Metric{},
 	}, nil
 }
 
@@ -412,16 +411,17 @@ func telemetryMiddleware(tracer telemetry.Trace) httprouter.Middleware {
 
 			txName := fmt.Sprintf("%s (%s)", routePattern, r.Method)
 
-			ctx, span := tracer.AddSpan(r.Context(), txName)
-			defer span.End()
-
-			// The Span returned by tracer.StartWebSpan may be a
-			// http.ResponseWriter as well. In this case we want to use it when
-			// calling the user handler.
-			spanWriter, ok := span.(http.ResponseWriter)
-			if ok {
-				w = spanWriter
+			attr := []attribute.KeyValue{
+				{
+					Key:   "route_pattern",
+					Value: attribute.StringValue(txName),
+				},
 			}
+
+			ctx, span := otel.GetTracerProvider().Tracer(_defaultApplicationName).
+				Start(r.Context(), "webapp.telemetry.middleware",
+					trace.WithAttributes(attr...))
+			defer span.End()
 
 			r2 := r.WithContext(ctx)
 
@@ -431,14 +431,12 @@ func telemetryMiddleware(tracer telemetry.Trace) httprouter.Middleware {
 
 			start := time.Now()
 			handler(w2, r2)
-			recordRequest(r2.Context(), w2.Status(), time.Since(start), r.Method, routePattern)
+			recordRequest(r2.Context(), w2.Status(), start, r.Method, routePattern)
 		}
 	}
 }
 
-func recordRequest(ctx context.Context, status int, delta time.Duration, method, routePattern string) {
-	meter := otel.Meter("go-toolkit")
-
+func recordRequest(ctx context.Context, status int, delta time.Time, method, routePattern string) {
 	statusClass := strconv.Itoa(status/100) + "xx" // 2xx, 3xx, 4xx, 5xx
 	attr := []attribute.KeyValue{
 		{
@@ -458,18 +456,22 @@ func recordRequest(ctx context.Context, status int, delta time.Duration, method,
 			Value: attribute.StringValue(telemetry.SanitizeMetricTagValue(routePattern)),
 		},
 	}
-	reqIncr, err := meter.Int64UpDownCounter("http.server.request.counter")
+	httpReqCounter, err := otel.GetMeterProvider().Meter(_defaultApplicationName).
+		Int64UpDownCounter("http.server.request.counter")
 	if err != nil {
 		return
 	}
-	reqIncr.Add(ctx, 1, metric.WithAttributes(attr...))
+	httpReqCounter.Add(ctx, 1, metric.WithAttributes(attr...))
 
-	reqHistogram, err := meter.Float64Histogram("http.server.request.duration")
+	httpServerDuration, err := otel.GetMeterProvider().Meter(_defaultApplicationName).
+		Float64Histogram("http.server.request.duration")
 	if err != nil {
 		return
 	}
 
-	reqHistogram.Record(ctx, delta.Seconds(), metric.WithAttributes(attr...))
+	// Use floating point division here for higher precision (instead of Millisecond method).
+	elapsedTime := float64(time.Since(delta)) / float64(time.Millisecond)
+	httpServerDuration.Record(ctx, elapsedTime, metric.WithAttributes(attr...))
 }
 
 type pooledTransportPoolInfo map[string]map[string]int64
