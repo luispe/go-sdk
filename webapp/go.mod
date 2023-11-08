@@ -5,7 +5,7 @@ go 1.21.3
 require (
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/pomelo-la/go-toolkit/httprouter v0.1.1
-	github.com/pomelo-la/go-toolkit/logger v0.1.0
+	github.com/pomelo-la/go-toolkit/logger v0.1.1
 	github.com/pomelo-la/go-toolkit/telemetry v0.1.4
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/otel v1.19.0

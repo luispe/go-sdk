@@ -37,6 +37,7 @@ const (
 	_defaultCompressionLevel = 5
 	_requestIDHeader         = "x-request-id"
 	_debugHeader             = "x-debug"
+	_defaultLogLevel         = logger.LevelInfo
 )
 
 var _defaultApplicationName = os.Getenv("OTEL_SERVICE_NAME")
@@ -211,7 +212,7 @@ func New(optFns ...func(opts *AppOptions)) (*Application, error) {
 		fn(&config)
 	}
 
-	config.LogLevel = logger.LevelInfo
+	log := configureLogger(config)
 
 	runtime, err := configRuntime(config)
 	if err != nil {
@@ -223,8 +224,6 @@ func New(optFns ...func(opts *AppOptions)) (*Application, error) {
 			ShutdownTimeout: 5 * time.Second,
 		}
 	}
-
-	log := configureLogger(config)
 
 	if !strings.EqualFold(runtime.Environment, _defaultRuntimeEnvironment) {
 		tracer, err := telemetry.NewTrace(context.Background())
@@ -259,6 +258,10 @@ func New(optFns ...func(opts *AppOptions)) (*Application, error) {
 }
 
 func configureLogger(config AppOptions) *logger.Logger {
+	if config.LogLevel.LevelToString() == "" {
+		config.LogLevel = _defaultLogLevel
+	}
+
 	traceIDFn := func(ctx context.Context) string {
 		traceID, err := telemetry.GetTraceID(ctx)
 		if err != nil {
@@ -275,7 +278,7 @@ func configRuntime(opt AppOptions) (*Runtime, error) {
 	if len(opt.Runtime) == 0 {
 		env, err := RuntimeFromEnv()
 		if err != nil {
-			return nil, err
+			return &runtime, nil
 		}
 
 		runtime = env
@@ -284,7 +287,7 @@ func configRuntime(opt AppOptions) (*Runtime, error) {
 	if len(opt.Runtime) != 0 {
 		env, err := RuntimeFromString(opt.Runtime)
 		if err != nil {
-			return nil, err
+			return &runtime, nil
 		}
 
 		runtime = env

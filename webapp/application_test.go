@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/pomelo-la/go-toolkit/httprouter"
 	"github.com/pomelo-la/go-toolkit/logger"
@@ -15,74 +16,80 @@ import (
 )
 
 func TestNewWebApplication(t *testing.T) {
-	type args struct {
-		env string
-	}
-	tests := []struct {
-		name        string
-		args        args
-		err         error
-		options     []func(options *webapp.AppOptions)
-		wantRuntime webapp.Runtime
-	}{
-		{
-			name: "New web backend with default local scope",
-			args: args{env: "local"},
-			options: []func(options *webapp.AppOptions){
-				func(options *webapp.AppOptions) {
-					webapp.WithLogLevel(logger.LevelInfo)
-				},
-			},
-			wantRuntime: webapp.Runtime{
-				Environment: "local",
-			},
-		},
-		{
-			name: "New web backend with an environment scope value",
-			args: args{env: "local"},
-			options: []func(options *webapp.AppOptions){
-				func(options *webapp.AppOptions) {
-					webapp.WithEnvironmentRuntime("local")
-				},
-			},
-			wantRuntime: webapp.Runtime{
-				Environment: "local",
-			},
-		},
-		{
-			name: "New web backend with an error handling function",
-			args: args{env: "local"},
-			options: []func(options *webapp.AppOptions){
-				func(options *webapp.AppOptions) {
-					webapp.WithErrorHandler(func(err error, defaultHandlerError func(error) httprouter.HandlerError) httprouter.HandlerError {
-						return httprouter.HandlerError{
-							Error:      err,
-							Notify:     true,
-							StatusCode: http.StatusInternalServerError,
-						}
-					})
-				},
-			},
-			wantRuntime: webapp.Runtime{
-				Environment: "local",
-			},
-		},
-	}
+	t.Run("default app", func(t *testing.T) {
+		app, err := webapp.New()
+		require.NoError(t, err)
+		require.NotNil(t, app)
+		require.NotNil(t, app.Logger)
+		require.NotNil(t, app.Router)
+		require.NotNil(t, app.Tracer)
+		require.Equal(t, "local", app.Runtime.Environment)
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := os.Setenv("RUNTIME", tt.args.env)
-			assert.NoError(t, err)
+	t.Run("web app with configure log level", func(t *testing.T) {
+		app, err := webapp.New(webapp.WithLogLevel(logger.LevelWarn))
+		require.NoError(t, err)
+		require.NotNil(t, app)
+		require.NotNil(t, app.Logger)
+		require.NotNil(t, app.Router)
+		require.NotNil(t, app.Tracer)
+		require.Equal(t, "local", app.Runtime.Environment)
+	})
 
-			app, err := webapp.New(tt.options...)
-			require.Equal(t, tt.err, err)
-			require.NotNil(t, app)
-			require.NotNil(t, app.Logger)
-			require.NotNil(t, app.Router)
-			require.NotNil(t, app.Tracer)
-			require.Equal(t, tt.wantRuntime.Environment, app.Runtime.Environment)
-		})
-	}
+	t.Run("web app with configure timeouts", func(t *testing.T) {
+		timeOuts := httprouter.Timeouts{
+			ReadTimeout:       5 * time.Second,
+			ReadHeaderTimeout: 5 * time.Second,
+			WriteTimeout:      10 * time.Second,
+			ShutdownTimeout:   10 * time.Second,
+		}
+		app, err := webapp.New(webapp.WithTimeouts(timeOuts))
+		require.NoError(t, err)
+		require.NotNil(t, app)
+		require.NotNil(t, app.Logger)
+		require.NotNil(t, app.Router)
+		require.NotNil(t, app.Tracer)
+		require.Equal(t, "local", app.Runtime.Environment)
+	})
+
+	t.Run("web app with configure listener", func(t *testing.T) {
+		ln, err := net.Listen("tcp", ":9090")
+		require.NoError(t, err)
+		app, err := webapp.New(webapp.WithListener(ln))
+		require.NoError(t, err)
+		require.NotNil(t, app)
+		require.NotNil(t, app.Logger)
+		require.NotNil(t, app.Router)
+		require.NotNil(t, app.Tracer)
+		require.Equal(t, "local", app.Runtime.Environment)
+	})
+
+	t.Run("web app with configure err handler func", func(t *testing.T) {
+		errHandler := func(err error, defaultHandlerError func(error) httprouter.HandlerError) httprouter.HandlerError {
+			return httprouter.HandlerError{
+				Error:      err,
+				Notify:     false,
+				StatusCode: http.StatusInternalServerError,
+			}
+		}
+		app, err := webapp.New(webapp.WithErrorHandler(errHandler))
+		require.NoError(t, err)
+		require.NotNil(t, app)
+		require.NotNil(t, app.Logger)
+		require.NotNil(t, app.Router)
+		require.NotNil(t, app.Tracer)
+		require.Equal(t, "local", app.Runtime.Environment)
+	})
+
+	t.Run("web app with configure environment", func(t *testing.T) {
+		app, err := webapp.New(webapp.WithEnvironmentRuntime("production"))
+		require.NoError(t, err)
+		require.NotNil(t, app)
+		require.NotNil(t, app.Logger)
+		require.NotNil(t, app.Router)
+		require.NotNil(t, app.Tracer)
+		require.Equal(t, "production", app.Runtime.Environment)
+	})
 }
 
 func TestApplicationRunError(t *testing.T) {
