@@ -36,8 +36,6 @@ const (
 	// The level should be one of the ones defined in the flat package.
 	// Higher levels typically run slower but compress more.
 	_defaultCompressionLevel = 5
-	_requestIDHeader         = "x-request-id"
-	_debugHeader             = "x-debug"
 	_defaultLogLevel         = logger.LevelInfo
 )
 
