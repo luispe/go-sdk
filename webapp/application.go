@@ -128,7 +128,7 @@ func (a *Application) Run() error {
 	}
 
 	a.Logger.Info(ctx, "http server listening")
-	defer a.Logger.Info(ctx, "shutdown complete")
+	defer a.Logger.Info(ctx, "shutdown gracefully complete")
 
 	if err := a.printRoutes(); err != nil {
 		return err
@@ -211,6 +211,7 @@ func (a *Application) printRoutes() error {
 }
 
 // New instantiates a backend Application with sane defaults.
+//
 //revive:disable:cognitive-complexity
 func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, error) {
 	if err := configureAppName(serviceName); err != nil {
