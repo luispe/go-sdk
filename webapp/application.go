@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -39,7 +40,10 @@ const (
 	_defaultLogLevel         = logger.LevelInfo
 )
 
-var _defaultApplicationName = os.Getenv("OTEL_SERVICE_NAME")
+// ErrInvalidAppName is an error that is returned when the app name provided is invalid.
+var ErrInvalidAppName = errors.New("app name cannot be empty or contains blank spaces")
+
+var _defaultApplicationName string
 
 // Application is a container struct that contains all required base components
 // for building web applications.
@@ -207,7 +211,12 @@ func (a *Application) printRoutes() error {
 }
 
 // New instantiates a backend Application with sane defaults.
-func New(optFns ...func(opts *AppOptions)) (*Application, error) {
+//revive:disable:cognitive-complexity
+func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, error) {
+	if err := configureAppName(serviceName); err != nil {
+		return nil, err
+	}
+
 	var config AppOptions
 	for _, fn := range optFns {
 		fn(&config)
@@ -254,6 +263,28 @@ func New(optFns ...func(opts *AppOptions)) (*Application, error) {
 		Runtime: *runtime,
 		Logger:  *log,
 	}, nil
+}
+
+//revive:enable:cognitive-complexity
+
+func configureAppName(name string) error {
+	if name == "" {
+		return ErrInvalidAppName
+	}
+
+	whitespace := regexp.MustCompile(`\s`)
+	if whitespace.MatchString(name) {
+		return ErrInvalidAppName
+	}
+
+	err := os.Setenv("OTEL_SERVICE_NAME", name)
+	if err != nil {
+		return err
+	}
+
+	_defaultApplicationName = name
+
+	return nil
 }
 
 func configureLogger(config AppOptions) *logger.Logger {
