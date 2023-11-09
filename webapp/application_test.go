@@ -17,7 +17,7 @@ import (
 
 func TestNewWebApplication(t *testing.T) {
 	t.Run("default app", func(t *testing.T) {
-		app, err := webapp.New()
+		app, err := webapp.New("test-app")
 		require.NoError(t, err)
 		require.NotNil(t, app)
 		require.NotNil(t, app.Logger)
@@ -26,8 +26,23 @@ func TestNewWebApplication(t *testing.T) {
 		require.Equal(t, "local", app.Runtime.Environment)
 	})
 
+	t.Run("err app name empty", func(t *testing.T) {
+		_, err := webapp.New("")
+		assert.Equal(t, err, webapp.ErrInvalidAppName)
+	})
+
+	t.Run("err app name blank space", func(t *testing.T) {
+		_, err := webapp.New(" ")
+		assert.Equal(t, err, webapp.ErrInvalidAppName)
+	})
+
+	t.Run("err app name blank space between name", func(t *testing.T) {
+		_, err := webapp.New("my app")
+		assert.Equal(t, err, webapp.ErrInvalidAppName)
+	})
+
 	t.Run("web app with configure log level", func(t *testing.T) {
-		app, err := webapp.New(webapp.WithLogLevel(logger.LevelWarn))
+		app, err := webapp.New("test-app", webapp.WithLogLevel(logger.LevelWarn))
 		require.NoError(t, err)
 		require.NotNil(t, app)
 		require.NotNil(t, app.Logger)
@@ -43,7 +58,7 @@ func TestNewWebApplication(t *testing.T) {
 			WriteTimeout:      10 * time.Second,
 			ShutdownTimeout:   10 * time.Second,
 		}
-		app, err := webapp.New(webapp.WithTimeouts(timeOuts))
+		app, err := webapp.New("test-app", webapp.WithTimeouts(timeOuts))
 		require.NoError(t, err)
 		require.NotNil(t, app)
 		require.NotNil(t, app.Logger)
@@ -55,7 +70,7 @@ func TestNewWebApplication(t *testing.T) {
 	t.Run("web app with configure listener", func(t *testing.T) {
 		ln, err := net.Listen("tcp", ":9090")
 		require.NoError(t, err)
-		app, err := webapp.New(webapp.WithListener(ln))
+		app, err := webapp.New("test-app", webapp.WithListener(ln))
 		require.NoError(t, err)
 		require.NotNil(t, app)
 		require.NotNil(t, app.Logger)
@@ -72,7 +87,7 @@ func TestNewWebApplication(t *testing.T) {
 				StatusCode: http.StatusInternalServerError,
 			}
 		}
-		app, err := webapp.New(webapp.WithErrorHandler(errHandler))
+		app, err := webapp.New("test-app", webapp.WithErrorHandler(errHandler))
 		require.NoError(t, err)
 		require.NotNil(t, app)
 		require.NotNil(t, app.Logger)
@@ -82,7 +97,7 @@ func TestNewWebApplication(t *testing.T) {
 	})
 
 	t.Run("web app with configure environment", func(t *testing.T) {
-		app, err := webapp.New(webapp.WithEnvironmentRuntime("production"))
+		app, err := webapp.New("test-app", webapp.WithEnvironmentRuntime("production"))
 		require.NoError(t, err)
 		require.NotNil(t, app)
 		require.NotNil(t, app.Logger)
@@ -122,7 +137,7 @@ func TestApplicationRunError(t *testing.T) {
 			assert.NoError(t, err)
 			defer os.Setenv("PORT", originWebappPort)
 
-			app, err := webapp.New()
+			app, err := webapp.New("test-app")
 			require.NoError(t, err)
 			require.NotEmpty(t, app)
 
