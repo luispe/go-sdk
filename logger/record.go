@@ -56,3 +56,18 @@ func (l Level) LevelToString() string {
 		return ""
 	}
 }
+
+// StringToLogLevel converts a given string log level value to its corresponding
+// Level representation. By default, return LevelInfo
+func StringToLogLevel(stringLevel string) Level {
+	switch stringLevel {
+	case "DEBUG":
+		return LevelDebug
+	case "WARN":
+		return LevelWarn
+	case "ERROR":
+		return LevelError
+	default:
+		return LevelInfo
+	}
+}
