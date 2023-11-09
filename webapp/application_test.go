@@ -51,6 +51,19 @@ func TestNewWebApplication(t *testing.T) {
 		require.Equal(t, "local", app.Runtime.Environment)
 	})
 
+	t.Run("web app with configure log level from env", func(t *testing.T) {
+		err := os.Setenv("LOG_LEVEL", "ERROR")
+		assert.NoError(t, err)
+
+		app, err := webapp.New("test-app")
+		require.NoError(t, err)
+		require.NotNil(t, app)
+		require.NotNil(t, app.Logger)
+		require.NotNil(t, app.Router)
+		require.NotNil(t, app.Tracer)
+		require.Equal(t, "local", app.Runtime.Environment)
+	})
+
 	t.Run("web app with configure timeouts", func(t *testing.T) {
 		timeOuts := httprouter.Timeouts{
 			ReadTimeout:       5 * time.Second,
