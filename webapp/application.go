@@ -117,18 +117,20 @@ func WithEnvironmentRuntime(environment string) func(options *AppOptions) {
 
 // Run starts your Application, it blocks until os.Interrupt is received.
 func (a *Application) Run() error {
+	ctx := context.Background()
 	err := a.configureListener()
 	if err != nil {
 		return err
 	}
 
-	a.Logger.Info(context.Background(), "http server listening")
+	a.Logger.Info(ctx, "http server listening")
+	defer a.Logger.Info(ctx, "shutdown complete")
 
 	if err := a.printRoutes(); err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go expvarPolling(ctx)
 
@@ -138,12 +140,12 @@ func (a *Application) Run() error {
 		return err
 	}
 
-	if err := a.Meter.ShutdownMetricProvider(ctx); err != nil {
-		a.Logger.Error(ctx, "shutdown telemetry meter", "error_msg", err)
-		return err
+	if !strings.EqualFold(a.Runtime.Environment, _defaultRuntimeEnvironment) {
+		defer a.Meter.ShutdownMetricProvider(ctx)
+		defer a.Meter.ShutdownMetricProvider(ctx)
 	}
 
-	return a.Tracer.ShutdownTraceProvider(ctx)
+	return nil
 }
 
 func (a *Application) configureListener() error {
@@ -308,7 +310,7 @@ func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFun
 	})
 
 	mdwl := []httprouter.Middleware{
-		telemetryMiddleware(trace),
+		telemetryMiddleware(),
 		logMiddleware(log),
 		panicsMiddleware(log),
 		headerForwarder(trace),
@@ -402,7 +404,7 @@ func panicsMiddleware(log logger.Logger) httprouter.Middleware {
 
 // Telemetry middleware simplifies tracing of incoming web requests by
 // initiating a new Span and composing the request context with it.
-func telemetryMiddleware(tracer telemetry.Trace) httprouter.Middleware {
+func telemetryMiddleware() httprouter.Middleware {
 	return func(handler http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			routePattern := chi.RouteContext(r.Context()).RoutePattern()
@@ -489,8 +491,7 @@ func expvarPolling(ctx context.Context) {
 }
 
 func exportedVarPoolHTTP() {
-	meter := otel.Meter("go-toolkit")
-	v := expvar.Get("go-toolkit.http.client.conn_pools")
+	v := expvar.Get("http.client.conn_pools")
 	if v == nil {
 		return
 	}
@@ -500,8 +501,8 @@ func exportedVarPoolHTTP() {
 		return
 	}
 
-	if _, err := meter.Int64ObservableGauge("go-toolkit.http.client.conn_pool",
-		metric.WithInt64Callback(func(_ context.Context, observer metric.Int64Observer) error {
+	_, err := otel.GetMeterProvider().Meter(_defaultApplicationName).Int64ObservableGauge("http.client.conn_pool",
+		metric.WithInt64Callback(func(ctx context.Context, observer metric.Int64Observer) error {
 			for pool, v := range info {
 				for network, conns := range v {
 					attr := []attribute.KeyValue{
@@ -518,8 +519,8 @@ func exportedVarPoolHTTP() {
 				}
 			}
 			return nil
-		}),
-	); err != nil {
+		}))
+	if err != nil {
 		return
 	}
 }
