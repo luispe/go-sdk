@@ -289,7 +289,12 @@ func configureAppName(name string) error {
 }
 
 func configureLogger(config AppOptions) *logger.Logger {
-	if config.LogLevel.LevelToString() == "" {
+	envLogLevel := os.Getenv("LOG_LEVEL")
+	if envLogLevel != "" {
+		config.LogLevel = logger.StringToLogLevel(envLogLevel)
+	}
+
+	if config.LogLevel.LevelToString() == "" && envLogLevel == "" {
 		config.LogLevel = _defaultLogLevel
 	}
 
