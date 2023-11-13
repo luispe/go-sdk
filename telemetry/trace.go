@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdkTrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 const _shutdownTraceTimeout = 10 * time.Second
@@ -158,7 +159,7 @@ func GetValues(ctx context.Context) (*Values, error) {
 
 	return &Values{
 		TraceID: traceID.String(),
-		Tracer:  trace.NewNoopTracerProvider().Tracer(""),
+		Tracer:  noop.NewTracerProvider().Tracer(""),
 		Now:     time.Now(),
 	}, nil
 }
