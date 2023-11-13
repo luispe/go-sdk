@@ -5,12 +5,13 @@ This repository contains many go packages:
 
 - [auth](./auth)
 - [httprouter](./httprouter)
-- [log](./logger)
-- [telemetry](./telemetry)
+- [logger](./logger)
 - aws services
   - [config](./service/aws/config)
   - [sqs](./service/aws/sqs)
   - [s3](./service/aws/s3)
+- [telemetry](./telemetry)
+- [webapp](./webapp)
 
 
 This monorepo was created to improve collaboration and productivity between developers.
