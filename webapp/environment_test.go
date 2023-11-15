@@ -10,8 +10,8 @@ import (
 
 func TestRuntimeFromEnv(t *testing.T) {
 	// Positive test case
-	os.Setenv("RUNTIME", "production")
-	defer os.Unsetenv("RUNTIME")
+	os.Setenv("ENVIRONMENT", "production")
+	defer os.Unsetenv("ENVIRONMENT")
 
 	runtime, err := webapp.EnvironmentFromEnvVariable()
 	if err != nil {
@@ -22,7 +22,7 @@ func TestRuntimeFromEnv(t *testing.T) {
 	}
 
 	// Negative test case
-	os.Unsetenv("RUNTIME")
+	os.Unsetenv("ENVIRONMENT")
 	_, err = webapp.EnvironmentFromEnvVariable()
 	if !errors.Is(err, webapp.ErrMissingEnvironment) {
 		t.Errorf("Expected error: %v, but got: %v", webapp.ErrMissingEnvironment, err)
