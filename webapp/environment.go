@@ -5,8 +5,8 @@ import (
 	"os"
 )
 
-// ErrMissingEnvironment is an error that represents the case when the RUNTIME environment variable is empty.
-var ErrMissingEnvironment = errors.New("RUNTIME env is empty")
+// ErrMissingEnvironment is an error that represents the case when the ENVIRONMENT env variable is empty.
+var ErrMissingEnvironment = errors.New("ENVIRONMENT env var is empty")
 
 // Environment struct is the parsed representation of the
 // Environment in which the backend is running.
@@ -14,10 +14,10 @@ type Environment struct {
 	Name string
 }
 
-// EnvironmentFromEnvVariable reads the value contained in the RUNTIME env variable
+// EnvironmentFromEnvVariable reads the value contained in the ENVIRONMENT env variable
 // and parses it in order to return a filled in Environment struct.
 func EnvironmentFromEnvVariable() (Environment, error) {
-	runtime := os.Getenv("RUNTIME")
+	runtime := os.Getenv("ENVIRONMENT")
 	if len(runtime) <= 0 {
 		return Environment{}, ErrMissingEnvironment
 	}
