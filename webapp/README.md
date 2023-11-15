@@ -30,7 +30,7 @@ Please Configure the following environment variables for you webapp
 | OTEL_EXPORTER_OTLP_HEADERS        | api-key=<newrelic_license_key> | yes (only for cloud runtime) |         |
 | OTEL_EXPORTER_OTLP_ENDPOINT       | https://otlp.nr-data.net:4317  | yes (only for cloud runtime) |         |
 | OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT | 4095                           | no                           | 4095    |
-| RUNTIME                           |                                | no                           | local   |
+| ENVIRONMENT                       |                                | no                           | local   |
 | LOG_LEVEL                         |                                | no                           | info    |
 
 ## Remarks

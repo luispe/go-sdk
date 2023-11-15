@@ -50,11 +50,11 @@ var _defaultApplicationName string
 type Application struct {
 	config AppOptions
 
-	Router  *httprouter.Router
-	Runtime Runtime
-	Logger  logger.Logger
-	Tracer  telemetry.Trace
-	Meter   telemetry.Metric
+	Router      *httprouter.Router
+	Environment Environment
+	Logger      logger.Logger
+	Tracer      telemetry.Trace
+	Meter       telemetry.Metric
 }
 
 // AppOptions represents the options for configuring a web application.
@@ -62,7 +62,7 @@ type AppOptions struct {
 	ServerTimeouts httprouter.Timeouts
 	LogLevel       logger.Level
 	Listener       net.Listener
-	Runtime        string
+	Environment    string
 	ErrorHandler   httprouter.ErrorHandlerFunc
 }
 
@@ -108,14 +108,14 @@ func WithListener(listener net.Listener) func(options *AppOptions) {
 	}
 }
 
-// WithEnvironmentRuntime allows you to configure the scope string to use for parsing and
+// WithEnvironment allows you to configure the scope string to use for parsing and
 // bootstrapping the http server.
 //
 // Default behavior is to use whatever value is in RUNTIME env variable, and if
 // none is found, then assume backend is running locally.
-func WithEnvironmentRuntime(environment string) func(options *AppOptions) {
+func WithEnvironment(environment string) func(options *AppOptions) {
 	return func(opts *AppOptions) {
-		opts.Runtime = environment
+		opts.Environment = environment
 	}
 }
 
@@ -144,7 +144,7 @@ func (a *Application) Run() error {
 		return err
 	}
 
-	if !strings.EqualFold(a.Runtime.Environment, _defaultRuntimeEnvironment) {
+	if !strings.EqualFold(a.Environment.Name, _defaultRuntimeEnvironment) {
 		defer a.Meter.ShutdownMetricProvider(ctx)
 		defer a.Meter.ShutdownMetricProvider(ctx)
 	}
@@ -236,7 +236,7 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 		}
 	}
 
-	if !strings.EqualFold(runtime.Environment, _defaultRuntimeEnvironment) {
+	if !strings.EqualFold(runtime.Name, _defaultRuntimeEnvironment) {
 		tracer, err := telemetry.NewTrace(context.Background())
 		if err != nil {
 			return nil, err
@@ -248,21 +248,21 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 		router := defaultHTTPRouter(*log, *tracer, config.ErrorHandler)
 
 		return &Application{
-			config:  config,
-			Router:  router,
-			Runtime: *runtime,
-			Logger:  *log,
-			Tracer:  *tracer,
-			Meter:   *meter,
+			config:      config,
+			Router:      router,
+			Environment: *runtime,
+			Logger:      *log,
+			Tracer:      *tracer,
+			Meter:       *meter,
 		}, nil
 	}
 
 	router := defaultHTTPRouter(*log, telemetry.Trace{}, config.ErrorHandler)
 	return &Application{
-		config:  config,
-		Router:  router,
-		Runtime: *runtime,
-		Logger:  *log,
+		config:      config,
+		Router:      router,
+		Environment: *runtime,
+		Logger:      *log,
 	}, nil
 }
 
@@ -309,10 +309,10 @@ func configureLogger(config AppOptions) *logger.Logger {
 	return logger.New(os.Stdout, config.LogLevel, _defaultApplicationName, traceIDFn)
 }
 
-func configRuntime(opt AppOptions) (*Runtime, error) {
-	runtime := Runtime{Environment: _defaultRuntimeEnvironment}
-	if len(opt.Runtime) == 0 {
-		env, err := RuntimeFromEnv()
+func configRuntime(opt AppOptions) (*Environment, error) {
+	runtime := Environment{Name: _defaultRuntimeEnvironment}
+	if len(opt.Environment) == 0 {
+		env, err := EnvironmentFromEnvVariable()
 		if err != nil {
 			return &runtime, nil
 		}
@@ -320,8 +320,8 @@ func configRuntime(opt AppOptions) (*Runtime, error) {
 		runtime = env
 	}
 
-	if len(opt.Runtime) != 0 {
-		env, err := RuntimeFromString(opt.Runtime)
+	if len(opt.Environment) != 0 {
+		env, err := EnvironmentFromString(opt.Environment)
 		if err != nil {
 			return &runtime, nil
 		}
