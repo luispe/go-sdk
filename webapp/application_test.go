@@ -23,7 +23,7 @@ func TestNewWebApplication(t *testing.T) {
 		require.NotNil(t, app.Logger)
 		require.NotNil(t, app.Router)
 		require.NotNil(t, app.Tracer)
-		require.Equal(t, "local", app.Runtime.Environment)
+		require.Equal(t, "local", app.Environment.Name)
 	})
 
 	t.Run("err app name empty", func(t *testing.T) {
@@ -48,7 +48,7 @@ func TestNewWebApplication(t *testing.T) {
 		require.NotNil(t, app.Logger)
 		require.NotNil(t, app.Router)
 		require.NotNil(t, app.Tracer)
-		require.Equal(t, "local", app.Runtime.Environment)
+		require.Equal(t, "local", app.Environment.Name)
 	})
 
 	t.Run("web app with configure log level from env", func(t *testing.T) {
@@ -61,7 +61,7 @@ func TestNewWebApplication(t *testing.T) {
 		require.NotNil(t, app.Logger)
 		require.NotNil(t, app.Router)
 		require.NotNil(t, app.Tracer)
-		require.Equal(t, "local", app.Runtime.Environment)
+		require.Equal(t, "local", app.Environment.Name)
 	})
 
 	t.Run("web app with configure timeouts", func(t *testing.T) {
@@ -77,7 +77,7 @@ func TestNewWebApplication(t *testing.T) {
 		require.NotNil(t, app.Logger)
 		require.NotNil(t, app.Router)
 		require.NotNil(t, app.Tracer)
-		require.Equal(t, "local", app.Runtime.Environment)
+		require.Equal(t, "local", app.Environment.Name)
 	})
 
 	t.Run("web app with configure listener", func(t *testing.T) {
@@ -89,7 +89,7 @@ func TestNewWebApplication(t *testing.T) {
 		require.NotNil(t, app.Logger)
 		require.NotNil(t, app.Router)
 		require.NotNil(t, app.Tracer)
-		require.Equal(t, "local", app.Runtime.Environment)
+		require.Equal(t, "local", app.Environment.Name)
 	})
 
 	t.Run("web app with configure err handler func", func(t *testing.T) {
@@ -106,17 +106,17 @@ func TestNewWebApplication(t *testing.T) {
 		require.NotNil(t, app.Logger)
 		require.NotNil(t, app.Router)
 		require.NotNil(t, app.Tracer)
-		require.Equal(t, "local", app.Runtime.Environment)
+		require.Equal(t, "local", app.Environment.Name)
 	})
 
 	t.Run("web app with configure environment", func(t *testing.T) {
-		app, err := webapp.New("test-app", webapp.WithEnvironmentRuntime("production"))
+		app, err := webapp.New("test-app", webapp.WithEnvironment("production"))
 		require.NoError(t, err)
 		require.NotNil(t, app)
 		require.NotNil(t, app.Logger)
 		require.NotNil(t, app.Router)
 		require.NotNil(t, app.Tracer)
-		require.Equal(t, "production", app.Runtime.Environment)
+		require.Equal(t, "production", app.Environment.Name)
 	})
 }
 

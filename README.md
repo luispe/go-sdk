@@ -62,7 +62,7 @@ go github.com/pomelo-la/go-toolkit/service/aws/config
 # or
 go github.com/pomelo-la/go-toolkit/service/aws/sqs
 # or
-go github.com/pomelo-la/go-toolki/log
+go github.com/pomelo-la/go-toolki/logger
 # etc
 ```
 
