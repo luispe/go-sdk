@@ -21,7 +21,7 @@ func TestNewTrace(t *testing.T) {
 		err   error
 	}
 
-	mockTrace, _ := telemetry.NewTrace(context.Background())
+	mockTrace, _ := telemetry.NewTrace(context.Background(), "my-service-name")
 	tests := []struct {
 		name string
 		args args
@@ -35,7 +35,7 @@ func TestNewTrace(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := telemetry.NewTrace(tt.args.ctx)
+			got, err := telemetry.NewTrace(tt.args.ctx, "my-service-name")
 			assert.ObjectsAreEqual(tt.want.trace, got)
 			assert.Equal(t, tt.want.err, err)
 		})
@@ -51,7 +51,7 @@ func TestShutdownTimeout(t *testing.T) {
 		err   error
 	}
 
-	mockTrace, _ := telemetry.NewTrace(context.Background())
+	mockTrace, _ := telemetry.NewTrace(context.Background(), "my-service-name")
 	tests := []struct {
 		name string
 		args args
@@ -65,7 +65,7 @@ func TestShutdownTimeout(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := telemetry.NewTrace(tt.args.ctx)
+			client, err := telemetry.NewTrace(tt.args.ctx, "my-service-name")
 			assert.NoError(t, err)
 
 			err = client.ShutdownTraceProvider(tt.args.ctx)
@@ -84,7 +84,7 @@ func TestConfigShutdownTimeout(t *testing.T) {
 		err   error
 	}
 
-	mockTrace, _ := telemetry.NewTrace(context.Background())
+	mockTrace, _ := telemetry.NewTrace(context.Background(), "my-service-name")
 	tests := []struct {
 		name string
 		args args
@@ -98,7 +98,7 @@ func TestConfigShutdownTimeout(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := telemetry.NewTrace(tt.args.ctx)
+			client, err := telemetry.NewTrace(tt.args.ctx, "my-service-name")
 			assert.NoError(t, err)
 
 			err = client.ShutdownTraceProvider(tt.args.ctx, telemetry.WithTraceShutdown(tt.args.timeout))
@@ -109,7 +109,7 @@ func TestConfigShutdownTimeout(t *testing.T) {
 
 func TestAddSpan(t *testing.T) {
 	ctx := context.Background()
-	trace, err := telemetry.NewTrace(ctx)
+	trace, err := telemetry.NewTrace(ctx, "my-service-name")
 	assert.NoError(t, err)
 
 	_, span := trace.AddSpan(ctx, "go-toolkit.telemetry", attribute.String("key1", "value1"))

@@ -2,12 +2,15 @@ package telemetry
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 const (
@@ -28,7 +31,7 @@ func newRelicTemporalitySelector(kind sdkmetric.InstrumentKind) metricdata.Tempo
 }
 
 // NewMetric creates a new metric provider.
-func NewMetric(ctx context.Context, optFns ...func(options *MetricOptions)) (*Metric, error) {
+func NewMetric(ctx context.Context, serviceName string, optFns ...func(options *MetricOptions)) (*Metric, error) {
 	var opt MetricOptions
 	for _, fn := range optFns {
 		fn(&opt)
@@ -43,7 +46,18 @@ func NewMetric(ctx context.Context, optFns ...func(options *MetricOptions)) (*Me
 		return nil, err
 	}
 
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+	res := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceInstanceIDKey.String(hostname),
+		semconv.ServiceName(serviceName),
+	)
+
 	metricProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithResource(res),
 		sdkmetric.WithReader(
 			sdkmetric.NewPeriodicReader(
 				exp,
