@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"os"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdkTrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 )
@@ -37,13 +39,21 @@ type Trace struct {
 }
 
 // NewTrace creates a new trace provider.
-func NewTrace(ctx context.Context) (*Trace, error) {
+func NewTrace(ctx context.Context, serviceName string) (*Trace, error) {
 	exp, err := otlptracegrpc.New(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	res := resource.Default()
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+	res := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceInstanceIDKey.String(hostname),
+		semconv.ServiceName(serviceName),
+	)
 
 	traceProvider := sdkTrace.NewTracerProvider(
 		sdkTrace.WithSampler(sdkTrace.AlwaysSample()),

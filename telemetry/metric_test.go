@@ -13,7 +13,7 @@ import (
 func TestNewMetric(t *testing.T) {
 	ctx := context.Background()
 
-	metric, err := telemetry.NewMetric(ctx)
+	metric, err := telemetry.NewMetric(ctx, "my-service-name")
 	assert.NotNil(t, metric)
 	assert.NoError(t, err)
 }
@@ -22,6 +22,7 @@ func TestNewMetricWithOptions(t *testing.T) {
 	ctx := context.Background()
 
 	metric, err := telemetry.NewMetric(ctx,
+		"my-service-name",
 		telemetry.WithMetricInterval(3*time.Second),
 	)
 	assert.NotNil(t, metric)
