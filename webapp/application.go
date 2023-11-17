@@ -22,6 +22,7 @@ import (
 	"github.com/pomelo-la/go-toolkit/httprouter"
 	"github.com/pomelo-la/go-toolkit/logger"
 	"github.com/pomelo-la/go-toolkit/telemetry"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -134,6 +135,11 @@ func (a *Application) Run() error {
 		return err
 	}
 
+	if err := runtime.Start(runtime.WithMinimumReadMemStatsInterval(time.Second)); err != nil {
+		a.Logger.Error(ctx, "otel.runtime.start", "error_msg", err)
+		return err
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go expvarPolling(ctx)
@@ -225,7 +231,7 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 
 	log := configureLogger(config)
 
-	runtime, err := configRuntime(config)
+	environment, err := configEnvironment(config)
 	if err != nil {
 		return nil, err
 	}
@@ -236,12 +242,12 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 		}
 	}
 
-	if !strings.EqualFold(runtime.Name, _defaultRuntimeEnvironment) {
-		tracer, err := telemetry.NewTrace(context.Background())
+	if !strings.EqualFold(environment.Name, _defaultRuntimeEnvironment) {
+		tracer, err := telemetry.NewTrace(context.Background(), serviceName)
 		if err != nil {
 			return nil, err
 		}
-		meter, err := telemetry.NewMetric(context.Background())
+		meter, err := telemetry.NewMetric(context.Background(), serviceName)
 		if err != nil {
 			return nil, err
 		}
@@ -250,7 +256,7 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 		return &Application{
 			config:      config,
 			Router:      router,
-			Environment: *runtime,
+			Environment: *environment,
 			Logger:      *log,
 			Tracer:      *tracer,
 			Meter:       *meter,
@@ -261,7 +267,7 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 	return &Application{
 		config:      config,
 		Router:      router,
-		Environment: *runtime,
+		Environment: *environment,
 		Logger:      *log,
 	}, nil
 }
@@ -309,27 +315,27 @@ func configureLogger(config AppOptions) *logger.Logger {
 	return logger.New(os.Stdout, config.LogLevel, _defaultApplicationName, traceIDFn)
 }
 
-func configRuntime(opt AppOptions) (*Environment, error) {
-	runtime := Environment{Name: _defaultRuntimeEnvironment}
+func configEnvironment(opt AppOptions) (*Environment, error) {
+	environment := Environment{Name: _defaultRuntimeEnvironment}
 	if len(opt.Environment) == 0 {
 		env, err := EnvironmentFromEnvVariable()
 		if err != nil {
-			return &runtime, nil
+			return &environment, nil
 		}
 
-		runtime = env
+		environment = env
 	}
 
 	if len(opt.Environment) != 0 {
 		env, err := EnvironmentFromString(opt.Environment)
 		if err != nil {
-			return &runtime, nil
+			return &environment, nil
 		}
 
-		runtime = env
+		environment = env
 	}
 
-	return &runtime, nil
+	return &environment, nil
 }
 
 func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFunc httprouter.ErrorHandlerFunc) *httprouter.Router {
