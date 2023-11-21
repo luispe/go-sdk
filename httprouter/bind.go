@@ -50,7 +50,7 @@ func bindJSON(ctx context.Context, r io.Reader, destination any) error {
 	// ReadAll is defined to read from src until EOF, and it does not
 	// treat it as en error as it happens when using json.Decoder.
 	if len(b) == 0 {
-		return NewErrorf(400, "Request body is empty")
+		return NewErrorf(http.StatusBadRequest, "Request body is empty")
 	}
 
 	if err := unmarshal(b, destination); err != nil {
@@ -64,13 +64,13 @@ func unmarshal(b []byte, destination any) error {
 	if err := json.Unmarshal(b, destination); err != nil {
 		switch e := err.(type) {
 		case *json.UnmarshalTypeError:
-			return NewErrorf(400,
+			return NewErrorf(http.StatusBadRequest,
 				"Unmarshal type error: expected=%v, got=%v, field=%v, offset=%v",
 				e.Type, e.Value, e.Field, e.Offset)
 		case *json.SyntaxError:
-			return NewErrorf(400, "Syntax error: offset=%v, error=%v", e.Offset, e)
+			return NewErrorf(http.StatusBadRequest, "Syntax error: offset=%v, error=%v", e.Offset, e)
 		default:
-			return NewErrorf(400, err.Error())
+			return NewErrorf(http.StatusBadRequest, err.Error())
 		}
 	}
 
