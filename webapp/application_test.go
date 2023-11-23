@@ -118,6 +118,16 @@ func TestNewWebApplication(t *testing.T) {
 		require.NotNil(t, app.Tracer)
 		require.Equal(t, "production", app.Environment.Name)
 	})
+
+	t.Run("web app with configure middleware", func(t *testing.T) {
+		app, err := webapp.New("test-app", webapp.WithMiddlewares(httprouter.Accept("^.+/json")))
+		require.NoError(t, err)
+		require.NotNil(t, app)
+		require.NotNil(t, app.Logger)
+		require.NotNil(t, app.Router)
+		require.NotNil(t, app.Tracer)
+		require.Equal(t, "local", app.Environment.Name)
+	})
 }
 
 func TestApplicationRunError(t *testing.T) {

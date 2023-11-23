@@ -65,6 +65,7 @@ type AppOptions struct {
 	Listener       net.Listener
 	Environment    string
 	ErrorHandler   httprouter.ErrorHandlerFunc
+	Middlewares    []httprouter.Middleware
 }
 
 // WithTimeouts allows you to configure the different timeouts
@@ -117,6 +118,14 @@ func WithListener(listener net.Listener) func(options *AppOptions) {
 func WithEnvironment(environment string) func(options *AppOptions) {
 	return func(opts *AppOptions) {
 		opts.Environment = environment
+	}
+}
+
+// WithMiddlewares allows you to configure the http middlewares to use for
+// httprouter.Middlewares.
+func WithMiddlewares(mw ...httprouter.Middleware) func(options *AppOptions) {
+	return func(opts *AppOptions) {
+		opts.Middlewares = mw
 	}
 }
 
@@ -251,7 +260,7 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 		if err != nil {
 			return nil, err
 		}
-		router := defaultHTTPRouter(*log, *tracer, config.ErrorHandler)
+		router := defaultHTTPRouter(*log, *tracer, config.ErrorHandler, config.Middlewares...)
 
 		return &Application{
 			config:      config,
@@ -263,7 +272,7 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 		}, nil
 	}
 
-	router := defaultHTTPRouter(*log, telemetry.Trace{}, config.ErrorHandler)
+	router := defaultHTTPRouter(*log, telemetry.Trace{}, config.ErrorHandler, config.Middlewares...)
 	return &Application{
 		config:      config,
 		Router:      router,
@@ -338,7 +347,7 @@ func configEnvironment(opt AppOptions) (*Environment, error) {
 	return &environment, nil
 }
 
-func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFunc httprouter.ErrorHandlerFunc) *httprouter.Router {
+func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFunc httprouter.ErrorHandlerFunc, mw ...httprouter.Middleware) *httprouter.Router {
 	notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := httprouter.NewErrorf(http.StatusNotFound, "resource %s not found", r.URL.Path)
 		_ = httprouter.RespondJSON(w, http.StatusNotFound, err)
@@ -352,20 +361,22 @@ func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFun
 		_ = httprouter.RespondJSON(w, http.StatusNoContent, nil)
 	})
 
-	mdwl := []httprouter.Middleware{
-		telemetryMiddleware(),
-		logMiddleware(log),
-		panicsMiddleware(log),
-		headerForwarder(trace),
-		newCompressor(),
-	}
+	mw = append(mw,
+		[]httprouter.Middleware{
+			telemetryMiddleware(),
+			logMiddleware(log),
+			panicsMiddleware(log),
+			headerForwarder(trace),
+			newCompressor(),
+		}...,
+	)
 
 	return httprouter.New(httprouter.Config{
 		NotFoundHandler:             notFoundHandler,
 		HealthCheckLivenessHandler:  livenessHandler,
 		HealthCheckReadinessHandler: readinessHandler,
 		EnableProfiler:              true,
-		Mw:                          mdwl,
+		Mw:                          mw,
 		ErrorHandlerFunc:            errorHandlerFunc,
 	})
 }
