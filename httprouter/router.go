@@ -57,6 +57,10 @@ type Router struct {
 func New(cfg Config) *Router {
 	mux := chi.NewRouter()
 
+	mux.Options("/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	if cfg.NotFoundHandler != nil {
 		mux.NotFound(cfg.NotFoundHandler.ServeHTTP)
 	}
