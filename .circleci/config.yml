@@ -3,7 +3,7 @@ version: 2.1
 setup: true
 
 orbs:
-  ci: pomelo-la/ci@0
+  ci: pomelo-la/ci@1
   security-check-orb: pomelo-la/security-check-orb@3
   path-filtering: circleci/path-filtering@1.0.0
 

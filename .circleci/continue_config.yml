@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  ci: pomelo-la/ci@0
+  ci: pomelo-la/ci@1
   docker: circleci/docker@2.0.1
   sonarqube: pomelo-la/sonarqube@1
   path-filtering: circleci/path-filtering@1.0.0
