@@ -76,7 +76,8 @@ func TestMidBreaker(t *testing.T) {
 			}
 			mdl := httprouter.Breaker(&cb, httprouter.DefaultBreakerValidator)
 
-			app.Method(http.MethodGet, "/", handler, mdl)
+			app.Use(mdl)
+			app.Get("/", handler)
 
 			recorder := httptest.NewRecorder()
 			request, err := http.NewRequest("GET", "/", nil)

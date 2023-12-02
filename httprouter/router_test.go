@@ -97,7 +97,7 @@ func TestNewConfigHandlers(t *testing.T) {
 func TestRouterMethod(t *testing.T) {
 	tests := []struct {
 		name     string
-		shortcut func(r *httprouter.Router, path string, handler httprouter.Handler, mw ...httprouter.Middleware)
+		shortcut func(r *httprouter.Router, path string, handler httprouter.Handler)
 		method   string
 	}{
 		{
@@ -166,43 +166,6 @@ func TestRouterMethod(t *testing.T) {
 	}
 }
 
-func TestRouterAny(t *testing.T) {
-	r := httprouter.New(httprouter.Config{})
-
-	methods := []string{
-		http.MethodGet,
-		http.MethodHead,
-		http.MethodOptions,
-		http.MethodPost,
-		http.MethodPut,
-		http.MethodPatch,
-		http.MethodDelete,
-		http.MethodTrace,
-	}
-
-	server := httptest.NewServer(r)
-	defer server.Close()
-
-	h := func(w http.ResponseWriter, r *http.Request) error {
-		w.WriteHeader(http.StatusOK)
-		return nil
-	}
-
-	r.Any("/", h)
-
-	for _, method := range methods {
-		req, err := http.NewRequest(method, server.URL, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		client := http.Client{}
-		resp, err := client.Do(req)
-		assert.Nil(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-	}
-}
-
 func TestRouterRoutes(t *testing.T) {
 	r := httprouter.New(httprouter.Config{})
 	h := func(w http.ResponseWriter, r *http.Request) error {
@@ -220,89 +183,18 @@ func TestRouterRoutes(t *testing.T) {
 	assert.NotNil(t, routes[0].Handler)
 }
 
-func TestRouteGroupMethod(t *testing.T) {
-	tests := []struct {
-		name     string
-		shortcut func(r *httprouter.RouteGroup, pattern string, handler httprouter.Handler, mw ...httprouter.Middleware)
-		method   string
-	}{
-		{
-			name:     "get",
-			shortcut: (*httprouter.RouteGroup).Get,
-			method:   http.MethodGet,
-		},
-		{
-			name:     "head",
-			shortcut: (*httprouter.RouteGroup).Head,
-			method:   http.MethodHead,
-		},
-		{
-			name:     "options",
-			shortcut: (*httprouter.RouteGroup).Options,
-			method:   http.MethodOptions,
-		},
-		{
-			name:     "post",
-			shortcut: (*httprouter.RouteGroup).Post,
-			method:   http.MethodPost,
-		},
-		{
-			name:     "put",
-			shortcut: (*httprouter.RouteGroup).Put,
-			method:   http.MethodPut,
-		},
-		{
-			name:     "patch",
-			shortcut: (*httprouter.RouteGroup).Patch,
-			method:   http.MethodPatch,
-		},
-		{
-			name:     "delete",
-			shortcut: (*httprouter.RouteGroup).Delete,
-			method:   http.MethodDelete,
-		},
-		{
-			name:     "trace",
-			shortcut: (*httprouter.RouteGroup).Trace,
-			method:   http.MethodTrace,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			r := httprouter.New(httprouter.Config{})
-
-			server := httptest.NewServer(r)
-			defer server.Close()
-
-			test.shortcut(r.Group("/group"), "/", func(w http.ResponseWriter, r *http.Request) error {
-				w.WriteHeader(http.StatusOK)
-				return nil
-			})
-
-			req, err := http.NewRequest(test.method, fmt.Sprintf("%s/group", server.URL), nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			client := http.Client{}
-			resp, err := client.Do(req)
-			assert.Nil(t, err)
-			assert.Equal(t, http.StatusOK, resp.StatusCode)
-		})
-	}
-}
-
 func TestRouterHandlerReturnNoError(t *testing.T) {
 	var mwWasCalled bool
-	mw := func(f http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			f(w, r)
+	mw := func(f http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			f.ServeHTTP(w, r)
 			mwWasCalled = true
-		}
+		})
 	}
 
-	r := httprouter.New(httprouter.Config{Mw: []httprouter.Middleware{mw}})
+	r := httprouter.New(httprouter.Config{})
 
+	r.Use(mw)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusCreated)
 		return nil
@@ -427,23 +319,22 @@ func TestRouterErrorHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		var mwWasCalled bool
-		mw := func(f http.HandlerFunc) http.HandlerFunc {
-			return func(w http.ResponseWriter, r *http.Request) {
-				f(w, r)
+		mw := func(f http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				f.ServeHTTP(w, r)
 				mwWasCalled = true
-			}
+			})
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			config := httprouter.Config{
-				Mw: []httprouter.Middleware{mw},
-			}
+			config := httprouter.Config{}
 
 			if tt.errorHandlerFunc != nil {
 				config.ErrorHandlerFunc = tt.errorHandlerFunc
 			}
 
 			router := httprouter.New(config)
+			router.Use(mw)
 			router.Get("/{id}", tt.handler.spy())
 
 			rr := httptest.NewRecorder()
@@ -465,134 +356,5 @@ func TestRouterErrorHandler(t *testing.T) {
 			assert.Equal(t, tt.expectedErrMessage, webErr.Message)
 		})
 
-	}
-}
-
-func TestRouteGroupAny(t *testing.T) {
-	r := httprouter.New(httprouter.Config{})
-	g := r.Group("/group")
-
-	// http methods
-	methods := []string{
-		http.MethodGet,
-		http.MethodHead,
-		http.MethodOptions,
-		http.MethodPost,
-		http.MethodPut,
-		http.MethodPatch,
-		http.MethodDelete,
-		http.MethodTrace,
-	}
-
-	server := httptest.NewServer(r)
-	defer server.Close()
-
-	h := func(w http.ResponseWriter, r *http.Request) error {
-		w.WriteHeader(http.StatusOK)
-		return nil
-	}
-
-	g.Any("/", h)
-
-	for _, method := range methods {
-		req, err := http.NewRequest(method, fmt.Sprintf("%s/group", server.URL), nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		client := http.Client{}
-		resp, err := client.Do(req)
-
-		assert.Nil(t, err)
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-	}
-}
-
-func TestRouteGroupMultiple(t *testing.T) {
-	tests := []struct {
-		name         string
-		path         string
-		expectedLogs []string
-	}{
-		{
-			name:         "get request to /ping",
-			path:         "/test",
-			expectedLogs: []string{"global middleware", "test from /"},
-		},
-		{
-			name:         "get request to /groupA/test",
-			path:         "/groupA/test",
-			expectedLogs: []string{"global middleware", "groupA middleware", "test from /groupA/test"},
-		},
-		{
-			name:         "get request to /groupB/test",
-			path:         "/groupB/test",
-			expectedLogs: []string{"global middleware", "test from /groupB/test"},
-		},
-		{
-			name:         "get request to /groupB/groupBB/test",
-			path:         "/groupB/groupBB/test",
-			expectedLogs: []string{"global middleware", "groupBB middleware", "test from /groupB/groupBB/test"},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			var logs []string
-			mwLog := func(s string) httprouter.Middleware {
-				return func(handler http.HandlerFunc) http.HandlerFunc {
-					return func(w http.ResponseWriter, r *http.Request) {
-						logs = append(logs, s)
-						handler(w, r)
-					}
-				}
-			}
-
-			hLog := func(s string) httprouter.Handler {
-				return func(w http.ResponseWriter, r *http.Request) error {
-					w.WriteHeader(200)
-					logs = append(logs, s)
-					return nil
-				}
-			}
-
-			/*	Register the following groups' topology:
-
-				/					=> with global middleware
-				/groupA/ 			=> with groupA middleware (inherit global mid)
-				/groupB/ 			=> with no middlewares (inherit global mid)
-				/groupB/groupBB/ 	=> with groupBB middleware (inherit global mid and group BB)
-			*/
-
-			// Registers root
-			r := httprouter.New(httprouter.Config{Mw: []httprouter.Middleware{mwLog("global middleware")}})
-			r.Get("/test", hLog("test from /"))
-
-			// Registers groupA with groupA middleware
-			groupA := r.Group("/groupA", mwLog("groupA middleware"))
-			groupA.Get("/test", hLog("test from /groupA/test"))
-
-			// Registers groupB with no middleware
-			groupB := r.Group("/groupB")
-			groupB.Get("/test", hLog("test from /groupB/test"))
-
-			// Registers groupBB with groupBB middleware
-			groupBB := groupB.Group("/groupBB", mwLog("groupBB middleware"))
-			groupBB.Get("/test", hLog("test from /groupB/groupBB/test"))
-
-			server := httptest.NewServer(r)
-			defer server.Close()
-
-			req, err := http.NewRequest("GET", fmt.Sprintf("%s%s", server.URL, test.path), nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			client := http.Client{}
-			resp, err := client.Do(req)
-			assert.Nil(t, err)
-			assert.Equal(t, 200, resp.StatusCode)
-			assert.Equal(t, test.expectedLogs, logs)
-		})
 	}
 }

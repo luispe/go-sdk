@@ -6,32 +6,16 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"go.opentelemetry.io/otel/trace"
 )
 
-// Handler is a type that handles an http request within our framework.
+// Handler is a type that handles a http request within our framework.
 type Handler func(w http.ResponseWriter, r *http.Request) error
 
-// Middleware is a function designed to run some code before and/or after
-// another Handler. It is designed to remove boilerplate or other concerns not
-// direct to any given Handler.
-type Middleware func(http.HandlerFunc) http.HandlerFunc
-
-// wrapMiddleware creates a new handler by wrapping mw around a final
-// handler. The middlewares' Handlers will be executed by requests in the order
-// they are provided.
-func wrapMiddleware(handler http.HandlerFunc, mw []Middleware) http.HandlerFunc {
-	// Loop backwards through the middleware invoking each one. Replace the
-	// handler with the new wrapped handler. Looping backwards ensures that the
-	// first middleware of the slice is the first to be executed by requests.
-	for i := len(mw) - 1; i >= 0; i-- {
-		h := mw[i]
-		if h != nil {
-			handler = h(handler)
-		}
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := h(w, r); err != nil {
+		handleErr := DefaultHandlerError(err)
+		_ = RespondJSON(w, handleErr.StatusCode, handleErr.Error)
 	}
-
-	return handler
 }
 
 // Config allows configuring a Router instance.
@@ -41,15 +25,12 @@ type Config struct {
 	HealthCheckLivenessHandler  http.Handler
 	HealthCheckReadinessHandler http.Handler
 	EnableProfiler              bool
-
-	Mw []Middleware
 }
 
 // Router is a http.Handler which can be used to dispatch requests to different
 // handler functions via configurable routes.
 type Router struct {
-	mux            *chi.Mux
-	mw             []Middleware
+	mux            chi.Router
 	errHandlerFunc ErrorHandlerFunc
 }
 
@@ -75,117 +56,106 @@ func New(cfg Config) *Router {
 
 	return &Router{
 		mux:            mux,
-		mw:             cfg.Mw,
 		errHandlerFunc: cfg.ErrorHandlerFunc,
 	}
 }
 
-// Group creates a new RouteGroup with the given p prefix and middlewares which are
-// chained after this Router's middlewares.
-func (r *Router) Group(p string, mw ...Middleware) *RouteGroup {
-	return &RouteGroup{
-		router: r,
-		path:   p,
-		mw:     mw,
+// Use appends a middleware handler to the Mux middleware stack.
+//
+// The middleware stack for any Mux will execute before searching for a matching
+// route to a specific handler, which provides opportunity to respond early,
+// change the course of the request execution, or set request-scoped values for
+// the next http.Handler.
+func (r *Router) Use(middleware ...func(http.Handler) http.Handler) {
+	r.mux.Use(middleware...)
+}
+
+// With adds inline middlewares for an endpoint handler.
+func (r *Router) With(middlewares ...func(http.Handler) http.Handler) *Router {
+	return &Router{
+		mux: r.mux.With(middlewares...),
 	}
 }
 
-// Method adds the route `pattern` that matches `method` http method to
-// execute the `handler` http.Handler wrapped by `mw`.
-func (r *Router) Method(method, pattern string, handler Handler, mw ...Middleware) {
-	r.mux.Method(method, pattern, r.wrapHandler(r.handlerAdapter(handler), mw...))
-}
-
-// Any adds the route `pattern` that matches any http method to execute the `handler` http.Handler wrapped by `mw`.
-func (r *Router) Any(pattern string, handler Handler, mw ...Middleware) {
-	r.mux.Handle(pattern, r.wrapHandler(r.handlerAdapter(handler), mw...))
-}
-
-func (r *Router) handlerAdapter(handler Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		err := handler(w, req)
-		if err == nil {
-			return
-		}
-
-		var hErr HandlerError
-		if r.errHandlerFunc != nil {
-			hErr = r.errHandlerFunc(err, DefaultHandlerError)
-		} else {
-			hErr = DefaultHandlerError(err)
-		}
-
-		if hErr.Notify {
-			span := trace.SpanFromContext(req.Context())
-			defer span.End()
-
-			NotifyErr(req, err, hErr.StatusCode)
-		}
-
-		_ = RespondJSON(w, hErr.StatusCode, hErr.Error)
+// Group creates a new inline-Mux with a copy of middleware stack. It's useful
+// for a group of handlers along the same routing path that use an additional
+// set of middlewares.
+func (r *Router) Group(fn func(r Router)) *Router {
+	im := r.With()
+	if fn != nil {
+		fn(*im)
 	}
+
+	return im
 }
 
-func (r *Router) wrapHandler(handler http.HandlerFunc, mw ...Middleware) http.HandlerFunc {
-	// First wrap handler specific middleware around this handler.
-	handler = wrapMiddleware(handler, mw)
-
-	// Add the application's general middleware to the handler chain.
-	handler = wrapMiddleware(handler, r.mw)
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Populate context with URI params for later retrieval.
-		routeCtx := chi.RouteContext(r.Context())
-		routeParams := routeCtx.URLParams
-
-		params := make(URIParams, len(routeParams.Keys))
-		for i := range routeParams.Keys {
-			params[routeParams.Keys[i]] = routeParams.Values[i]
-		}
-
-		r = r.WithContext(WithParams(r.Context(), params))
-		handler(w, r)
+// Route creates a new Mux and mounts it along the `pattern` as a subrouter.
+// Effectively, this is a shorthand call to Mount.
+func (r *Router) Route(pattern string, fn func(r Router)) *Router {
+	if fn == nil {
+		panic(fmt.Sprintf("httrouter: attempting to Route() a nil subrouter on '%s'", pattern))
 	}
+
+	subRouter := New(Config{})
+	fn(*subRouter)
+	r.mux.Mount(pattern, subRouter)
+
+	return subRouter
 }
 
-// Get is a shortcut for r.Method(http.MethodGet, pattern, handle, mw).
-func (r *Router) Get(pattern string, handler Handler, mw ...Middleware) {
-	r.Method(http.MethodGet, pattern, handler, mw...)
+// Mount attaches another http.Handler or chi Router as a subrouter along a routing
+// path. It's very useful to split up a large API as many independent routers and
+// compose them as a single service using Mount.
+func (r *Router) Mount(pattern string, handler Handler) {
+	r.mux.Mount(pattern, handler)
 }
 
-// Head is a shortcut for r.Method(http.MethodHead, pattern, handle, mw).
-func (r *Router) Head(pattern string, handler Handler, mw ...Middleware) {
-	r.Method(http.MethodHead, pattern, handler, mw...)
+// Get adds the route `pattern` that matches a GET http method to
+// execute the `handlerFn` http.HandlerFunc.
+func (r *Router) Get(pattern string, handler Handler) {
+	r.mux.Get(pattern, handler.ServeHTTP)
 }
 
-// Options is a shortcut for r.Method(http.MethodOptions, pattern, handle, mw).
-func (r *Router) Options(pattern string, handler Handler, mw ...Middleware) {
-	r.Method(http.MethodOptions, pattern, handler, mw...)
+// Delete adds the route `pattern` that matches a DELETE http method to
+// execute the `handlerFn` http.HandlerFunc.
+func (r *Router) Delete(pattern string, handler Handler) {
+	r.mux.Delete(pattern, handler.ServeHTTP)
 }
 
-// Post is a shortcut for r.Method(http.MethodPost, pattern, handle, mw).
-func (r *Router) Post(pattern string, handler Handler, mw ...Middleware) {
-	r.Method(http.MethodPost, pattern, handler, mw...)
+// Head adds the route `pattern` that matches a HEAD http method to
+// execute the `handlerFn` http.HandlerFunc.
+func (r *Router) Head(pattern string, handler Handler) {
+	r.mux.Head(pattern, handler.ServeHTTP)
 }
 
-// Put is a shortcut for r.Method(http.MethodPut, pattern, handle, mw).
-func (r *Router) Put(pattern string, handler Handler, mw ...Middleware) {
-	r.Method(http.MethodPut, pattern, handler, mw...)
+// Options adds the route `pattern` that matches a OPTIONS http method to
+// execute the `handlerFn` http.HandlerFunc.
+func (r *Router) Options(pattern string, handler Handler) {
+	r.mux.Options(pattern, handler.ServeHTTP)
 }
 
-// Patch is a shortcut for r.Method(http.MethodPatch, pattern, handle, mw).
-func (r *Router) Patch(pattern string, handler Handler, mw ...Middleware) {
-	r.Method(http.MethodPatch, pattern, handler, mw...)
+// Patch adds the route `pattern` that matches a PATCH http method to
+// execute the `handlerFn` http.HandlerFunc.
+func (r *Router) Patch(pattern string, handler Handler) {
+	r.mux.Patch(pattern, handler.ServeHTTP)
 }
 
-// Delete is a shortcut for r.Method(http.MethodDelete, pattern, handle, mw).
-func (r *Router) Delete(pattern string, handler Handler, mw ...Middleware) {
-	r.Method(http.MethodDelete, pattern, handler, mw...)
+// Post adds the route `pattern` that matches a Post http method to
+// execute the `handlerFn` http.HandlerFunc.
+func (r *Router) Post(pattern string, handler Handler) {
+	r.mux.Post(pattern, handler.ServeHTTP)
 }
 
-// Trace is a shortcut for r.Method(http.MethodTrace, pattern, handle, mw).
-func (r *Router) Trace(pattern string, handler Handler, mw ...Middleware) {
-	r.Method(http.MethodTrace, pattern, handler, mw...)
+// Put adds the route `pattern` that matches a PUT http method to
+// execute the `handlerFn` http.HandlerFunc.
+func (r *Router) Put(pattern string, handler Handler) {
+	r.mux.Put(pattern, handler.ServeHTTP)
+}
+
+// Trace adds the route `pattern` that matches a TRACE http method to
+// execute the `handlerFn` http.HandlerFunc.
+func (r *Router) Trace(pattern string, handler Handler) {
+	r.mux.Trace(pattern, handler.ServeHTTP)
 }
 
 // ServeHTTP conforms to the http.Handler interface.
