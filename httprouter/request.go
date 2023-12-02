@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // URIParamsCtxKey is the context key used to store and retrieve URI parameters.
@@ -11,6 +13,12 @@ type URIParamsCtxKey struct{}
 
 // URIParams contains the key-value combination of parameters from the URI.
 type URIParams map[string]string
+
+// URLParam retrieves the value of the specified parameter from the given HTTP request.
+// It uses the chi.URLParam function to extract the parameter value.
+func URLParam(r *http.Request, param string) string {
+	return chi.URLParam(r, param)
+}
 
 // Params returns a map from the given context containing every URI parameter defined in the route.
 // The key represents the name of the route variable for the current request, if any.

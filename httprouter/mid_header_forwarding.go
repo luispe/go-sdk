@@ -9,9 +9,9 @@ import (
 
 // HeaderForwarder decorates a request context with the value of certain headers
 // in order to allow transport.HTTPRequester to use those headers in outgoing requests.
-func HeaderForwarder(tracer trace.Tracer) Middleware {
-	return func(handler http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+func HeaderForwarder(tracer trace.Tracer) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
 			_, span := tracer.Start(ctx, "HeaderForwarder")
@@ -23,7 +23,7 @@ func HeaderForwarder(tracer trace.Tracer) Middleware {
 			span.AddEvent("HeaderForwarder processing")
 
 			r2 := r.WithContext(ctx)
-			handler(w, r2)
-		}
+			next.ServeHTTP(w, r2)
+		})
 	}
 }

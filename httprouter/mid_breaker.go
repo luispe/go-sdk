@@ -30,13 +30,13 @@ type CircuitBreaker interface {
 	Failure()
 }
 
-// Breaker produces a Middleware that's governed by the passed Breaker and
+// Breaker produces a middleware that's governed by the passed Breaker and
 // BreakerValidator. Responses written by the next Handler whose status codes
 // fail the validator signal failures to the breaker. Once the breaker opens,
 // incoming requests are terminated before being answered with HTTP 503.
-func Breaker(cb CircuitBreaker, validator BreakerValidator) Middleware {
-	return func(handler http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+func Breaker(cb CircuitBreaker, validator BreakerValidator) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !cb.Allow() {
 				w.WriteHeader(http.StatusServiceUnavailable)
 				return
@@ -44,13 +44,13 @@ func Breaker(cb CircuitBreaker, validator BreakerValidator) Middleware {
 
 			w2 := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
-			handler(w2, r)
+			next.ServeHTTP(w2, r)
 
 			if validator(w2.Status()) {
 				cb.Success()
 			} else {
 				cb.Failure()
 			}
-		}
+		})
 	}
 }
