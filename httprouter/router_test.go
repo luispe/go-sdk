@@ -15,6 +15,12 @@ import (
 )
 
 func TestNewConfigHandlers(t *testing.T) {
+	mw := func(f http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			f.ServeHTTP(w, r)
+		})
+	}
+
 	tests := []struct {
 		name     string
 		config   httprouter.Config
@@ -69,6 +75,21 @@ func TestNewConfigHandlers(t *testing.T) {
 			config:   httprouter.Config{EnableProfiler: true},
 			inputURL: "/debug",
 			wantCode: http.StatusOK,
+		},
+		{
+			name:     "with middleware",
+			inputURL: "/",
+			config: httprouter.Config{
+				Middlewares: []func(http.Handler) http.Handler{mw},
+				HealthCheckLivenessHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					w.WriteHeader(http.StatusNoContent)
+				}),
+				HealthCheckReadinessHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					w.WriteHeader(http.StatusNoContent)
+				}),
+			},
+			wantCode: http.StatusNotFound,
+			wantMsg:  "",
 		},
 	}
 	for _, test := range tests {

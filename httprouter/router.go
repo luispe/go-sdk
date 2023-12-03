@@ -25,6 +25,8 @@ type Config struct {
 	HealthCheckLivenessHandler  http.Handler
 	HealthCheckReadinessHandler http.Handler
 	EnableProfiler              bool
+
+	Middlewares []func(http.Handler) http.Handler
 }
 
 // Router is a http.Handler which can be used to dispatch requests to different
@@ -37,6 +39,10 @@ type Router struct {
 // New instantiates a `Router` with the given configuration.
 func New(cfg Config) *Router {
 	mux := chi.NewRouter()
+
+	if cfg.Middlewares != nil {
+		mux.Use(cfg.Middlewares...)
+	}
 
 	if cfg.NotFoundHandler != nil {
 		mux.NotFound(cfg.NotFoundHandler.ServeHTTP)
