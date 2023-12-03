@@ -65,7 +65,6 @@ type AppOptions struct {
 	Listener       net.Listener
 	Environment    string
 	ErrorHandler   httprouter.ErrorHandlerFunc
-	Middlewares    []httprouter.Middleware
 }
 
 // WithTimeouts allows you to configure the different timeouts
@@ -118,14 +117,6 @@ func WithListener(listener net.Listener) func(options *AppOptions) {
 func WithEnvironment(environment string) func(options *AppOptions) {
 	return func(opts *AppOptions) {
 		opts.Environment = environment
-	}
-}
-
-// WithMiddlewares allows you to configure the http middlewares to use for
-// httprouter.Middlewares.
-func WithMiddlewares(mw ...httprouter.Middleware) func(options *AppOptions) {
-	return func(opts *AppOptions) {
-		opts.Middlewares = mw
 	}
 }
 
@@ -260,7 +251,7 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 		if err != nil {
 			return nil, err
 		}
-		router := defaultHTTPRouter(*log, *tracer, config.ErrorHandler, config.Middlewares...)
+		router := defaultHTTPRouter(*log, *tracer, config.ErrorHandler)
 
 		return &Application{
 			config:      config,
@@ -272,7 +263,7 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 		}, nil
 	}
 
-	router := defaultHTTPRouter(*log, telemetry.Trace{}, config.ErrorHandler, config.Middlewares...)
+	router := defaultHTTPRouter(*log, telemetry.Trace{}, config.ErrorHandler)
 	return &Application{
 		config:      config,
 		Router:      router,
@@ -347,7 +338,15 @@ func configEnvironment(opt AppOptions) (*Environment, error) {
 	return &environment, nil
 }
 
-func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFunc httprouter.ErrorHandlerFunc, mw ...httprouter.Middleware) *httprouter.Router {
+func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFunc httprouter.ErrorHandlerFunc) *httprouter.Router {
+	mw := []func(http.Handler) http.Handler{
+		telemetryMiddleware(),
+		logMiddleware(log),
+		panicsMiddleware(log),
+		headerForwarder(trace),
+		newCompressor(),
+	}
+
 	notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := httprouter.NewErrorf(http.StatusNotFound, "resource %s not found", r.URL.Path)
 		_ = httprouter.RespondJSON(w, http.StatusNotFound, err)
@@ -361,31 +360,21 @@ func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFun
 		_ = httprouter.RespondJSON(w, http.StatusNoContent, nil)
 	})
 
-	mw = append(mw,
-		[]httprouter.Middleware{
-			telemetryMiddleware(),
-			logMiddleware(log),
-			panicsMiddleware(log),
-			headerForwarder(trace),
-			newCompressor(),
-		}...,
-	)
-
 	return httprouter.New(httprouter.Config{
+		Middlewares:                 mw,
 		NotFoundHandler:             notFoundHandler,
 		HealthCheckLivenessHandler:  livenessHandler,
 		HealthCheckReadinessHandler: readinessHandler,
 		EnableProfiler:              true,
-		Mw:                          mw,
 		ErrorHandlerFunc:            errorHandlerFunc,
 	})
 }
 
 // headerForwarder decorates a request context with the value of certain headers
 // in order to allow transport.HTTPRequester to use those headers in outgoing requests.
-func headerForwarder(tracer telemetry.Trace) httprouter.Middleware {
-	return func(handler http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+func headerForwarder(tracer telemetry.Trace) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
 			_, span := tracer.AddSpan(ctx, "HeaderForwarder")
@@ -397,16 +386,18 @@ func headerForwarder(tracer telemetry.Trace) httprouter.Middleware {
 			span.AddEvent("HeaderForwarder processing")
 
 			r2 := r.WithContext(ctx)
-			handler(w, r2)
+			next.ServeHTTP(w, r2)
 		}
+
+		return http.HandlerFunc(fn)
 	}
 }
 
 // log decorates the request context with the given logger, accessible via
 // the go-core log methods with context.
-func logMiddleware(log logger.Logger) httprouter.Middleware {
-	return func(handler http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+func logMiddleware(log logger.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
 			if r.URL.RawQuery != "" {
 				path = fmt.Sprintf("%s?%s", path, r.URL.RawQuery)
@@ -418,8 +409,8 @@ func logMiddleware(log logger.Logger) httprouter.Middleware {
 				slog.String("remoteaddr", r.RemoteAddr),
 			)
 
-			handler(w, r)
-		}
+			next.ServeHTTP(w, r)
+		})
 	}
 }
 
@@ -428,19 +419,21 @@ func logMiddleware(log logger.Logger) httprouter.Middleware {
 //
 // NOTE: if you don't use web.RespondJSON to marshal the body into the writer,
 // make sure to set the Content-Type header on your response otherwise this middleware will not compress the response body.
-func newCompressor() httprouter.Middleware {
+func newCompressor() func(http.Handler) http.Handler {
 	c := middleware.NewCompressor(_defaultCompressionLevel)
-	return func(next http.HandlerFunc) http.HandlerFunc {
-		return c.Handler(next).ServeHTTP
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			c.Handler(next)
+		})
 	}
 }
 
 // panicsMiddleware handles any panic that may occur by notifying the error to an external telemetry system such NewRelic
 // and responding to the client with an `Error` and status code 500.
 // For this middleware to log, it requires the context to have a log.Logger.
-func panicsMiddleware(log logger.Logger) httprouter.Middleware {
-	return func(handler http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+func panicsMiddleware(log logger.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if err := recover(); err != nil {
 					log.Error(r.Context(), "panic recover")
@@ -451,16 +444,16 @@ func panicsMiddleware(log logger.Logger) httprouter.Middleware {
 				}
 			}()
 
-			handler(w, r)
-		}
+			next.ServeHTTP(w, r)
+		})
 	}
 }
 
 // Telemetry middleware simplifies tracing of incoming web requests by
 // initiating a new Span and composing the request context with it.
-func telemetryMiddleware() httprouter.Middleware {
-	return func(handler http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+func telemetryMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			routePattern := chi.RouteContext(r.Context()).RoutePattern()
 
 			txName := fmt.Sprintf("%s (%s)", routePattern, r.Method)
@@ -484,9 +477,9 @@ func telemetryMiddleware() httprouter.Middleware {
 			w2 := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
 			start := time.Now()
-			handler(w2, r2)
+			next.ServeHTTP(w2, r2)
 			recordRequest(r2.Context(), w2.Status(), start, r.Method, routePattern)
-		}
+		})
 	}
 }
 
