@@ -350,8 +350,8 @@ func configEnvironment(opt AppOptions) (*Environment, error) {
 func defaultHTTPRouter(
 	log logger.Logger,
 	errorHandlerFunc httprouter.ErrorHandlerFunc,
-	middlewares ...func(handler http.Handler) http.Handler) *httprouter.Router {
-
+	middlewares ...func(handler http.Handler) http.Handler,
+) *httprouter.Router {
 	middlewares = append(middlewares, []func(http.Handler) http.Handler{
 		telemetryMiddleware(),
 		logMiddleware(log),
