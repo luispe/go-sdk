@@ -65,6 +65,7 @@ type AppOptions struct {
 	Listener       net.Listener
 	Environment    string
 	ErrorHandler   httprouter.ErrorHandlerFunc
+	Middlewares    []func(http.Handler) http.Handler
 }
 
 // WithTimeouts allows you to configure the different timeouts
@@ -117,6 +118,14 @@ func WithListener(listener net.Listener) func(options *AppOptions) {
 func WithEnvironment(environment string) func(options *AppOptions) {
 	return func(opts *AppOptions) {
 		opts.Environment = environment
+	}
+}
+
+// WithGlobalMiddlewares allows you to configure the global middlewares to use
+// for httprouter.Router
+func WithGlobalMiddlewares(middlewares ...func(handler http.Handler) http.Handler) func(options *AppOptions) {
+	return func(opts *AppOptions) {
+		opts.Middlewares = middlewares
 	}
 }
 
@@ -251,7 +260,7 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 		if err != nil {
 			return nil, err
 		}
-		router := defaultHTTPRouter(*log, *tracer, config.ErrorHandler)
+		router := defaultHTTPRouter(*log, config.ErrorHandler, config.Middlewares...)
 
 		return &Application{
 			config:      config,
@@ -263,7 +272,7 @@ func New(serviceName string, optFns ...func(opts *AppOptions)) (*Application, er
 		}, nil
 	}
 
-	router := defaultHTTPRouter(*log, telemetry.Trace{}, config.ErrorHandler)
+	router := defaultHTTPRouter(*log, config.ErrorHandler, config.Middlewares...)
 	return &Application{
 		config:      config,
 		Router:      router,
@@ -338,14 +347,18 @@ func configEnvironment(opt AppOptions) (*Environment, error) {
 	return &environment, nil
 }
 
-func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFunc httprouter.ErrorHandlerFunc) *httprouter.Router {
-	mw := []func(http.Handler) http.Handler{
+func defaultHTTPRouter(
+	log logger.Logger,
+	errorHandlerFunc httprouter.ErrorHandlerFunc,
+	middlewares ...func(handler http.Handler) http.Handler) *httprouter.Router {
+
+	middlewares = append(middlewares, []func(http.Handler) http.Handler{
 		telemetryMiddleware(),
 		logMiddleware(log),
 		panicsMiddleware(log),
-		headerForwarder(trace),
+		headerForwarder(),
 		newCompressor(),
-	}
+	}...)
 
 	notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := httprouter.NewErrorf(http.StatusNotFound, "resource %s not found", r.URL.Path)
@@ -361,7 +374,7 @@ func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFun
 	})
 
 	return httprouter.New(httprouter.Config{
-		Middlewares:                 mw,
+		Middlewares:                 middlewares,
 		NotFoundHandler:             notFoundHandler,
 		HealthCheckLivenessHandler:  livenessHandler,
 		HealthCheckReadinessHandler: readinessHandler,
@@ -372,30 +385,29 @@ func defaultHTTPRouter(log logger.Logger, trace telemetry.Trace, errorHandlerFun
 
 // headerForwarder decorates a request context with the value of certain headers
 // in order to allow transport.HTTPRequester to use those headers in outgoing requests.
-func headerForwarder(tracer telemetry.Trace) func(next http.Handler) http.Handler {
+func headerForwarder() func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			_, span := tracer.AddSpan(ctx, "HeaderForwarder")
+			_, span := otel.GetTracerProvider().Tracer(_defaultApplicationName).
+				Start(ctx, "webapp.headerForwarder")
 			defer span.End()
 
 			propagator := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
 			ctx = propagator.Extract(ctx, propagation.HeaderCarrier(r.Header))
 
-			span.AddEvent("HeaderForwarder processing")
+			span.AddEvent("webapp.headerForwarder.processing")
 
 			r2 := r.WithContext(ctx)
 			next.ServeHTTP(w, r2)
-		}
-
-		return http.HandlerFunc(fn)
+		})
 	}
 }
 
 // log decorates the request context with the given logger, accessible via
 // the go-core log methods with context.
-func logMiddleware(log logger.Logger) func(http.Handler) http.Handler {
+func logMiddleware(log logger.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
@@ -419,19 +431,17 @@ func logMiddleware(log logger.Logger) func(http.Handler) http.Handler {
 //
 // NOTE: if you don't use web.RespondJSON to marshal the body into the writer,
 // make sure to set the Content-Type header on your response otherwise this middleware will not compress the response body.
-func newCompressor() func(http.Handler) http.Handler {
+func newCompressor() func(next http.Handler) http.Handler {
 	c := middleware.NewCompressor(_defaultCompressionLevel)
 	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			c.Handler(next)
-		})
+		return c.Handler(next)
 	}
 }
 
 // panicsMiddleware handles any panic that may occur by notifying the error to an external telemetry system such NewRelic
 // and responding to the client with an `Error` and status code 500.
 // For this middleware to log, it requires the context to have a log.Logger.
-func panicsMiddleware(log logger.Logger) func(http.Handler) http.Handler {
+func panicsMiddleware(log logger.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
@@ -451,7 +461,7 @@ func panicsMiddleware(log logger.Logger) func(http.Handler) http.Handler {
 
 // Telemetry middleware simplifies tracing of incoming web requests by
 // initiating a new Span and composing the request context with it.
-func telemetryMiddleware() func(http.Handler) http.Handler {
+func telemetryMiddleware() func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			routePattern := chi.RouteContext(r.Context()).RoutePattern()

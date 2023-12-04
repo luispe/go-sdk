@@ -118,6 +118,22 @@ func TestNewWebApplication(t *testing.T) {
 		require.NotNil(t, app.Tracer)
 		require.Equal(t, "production", app.Environment.Name)
 	})
+
+	mw := func(f http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			f.ServeHTTP(w, r)
+		})
+	}
+
+	t.Run("web app with configure middleware", func(t *testing.T) {
+		app, err := webapp.New("test-app", webapp.WithGlobalMiddlewares(mw))
+		require.NoError(t, err)
+		require.NotNil(t, app)
+		require.NotNil(t, app.Logger)
+		require.NotNil(t, app.Router)
+		require.NotNil(t, app.Tracer)
+		require.Equal(t, "local", app.Environment.Name)
+	})
 }
 
 func TestApplicationRunError(t *testing.T) {
