@@ -353,10 +353,10 @@ func defaultHTTPRouter(
 	middlewares ...func(handler http.Handler) http.Handler,
 ) *httprouter.Router {
 	middlewares = append(middlewares, []func(http.Handler) http.Handler{
-		telemetryMiddleware(),
+		telemetryMiddleware,
 		logMiddleware(log),
 		panicsMiddleware(log),
-		headerForwarder(),
+		headerForwarder,
 		newCompressor(),
 	}...)
 
@@ -385,24 +385,22 @@ func defaultHTTPRouter(
 
 // headerForwarder decorates a request context with the value of certain headers
 // in order to allow transport.HTTPRequester to use those headers in outgoing requests.
-func headerForwarder() func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
+func headerForwarder(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 
-			_, span := otel.GetTracerProvider().Tracer(_defaultApplicationName).
-				Start(ctx, "webapp.headerForwarder")
-			defer span.End()
+		_, span := otel.GetTracerProvider().Tracer(_defaultApplicationName).
+			Start(ctx, "webapp.headerForwarder")
+		defer span.End()
 
-			propagator := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
-			ctx = propagator.Extract(ctx, propagation.HeaderCarrier(r.Header))
+		propagator := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
+		ctx = propagator.Extract(ctx, propagation.HeaderCarrier(r.Header))
 
-			span.AddEvent("webapp.headerForwarder.processing")
+		span.AddEvent("webapp.headerForwarder.processing")
 
-			r2 := r.WithContext(ctx)
-			next.ServeHTTP(w, r2)
-		})
-	}
+		r2 := r.WithContext(ctx)
+		next.ServeHTTP(w, r2)
+	})
 }
 
 // log decorates the request context with the given logger, accessible via
@@ -461,36 +459,34 @@ func panicsMiddleware(log logger.Logger) func(next http.Handler) http.Handler {
 
 // Telemetry middleware simplifies tracing of incoming web requests by
 // initiating a new Span and composing the request context with it.
-func telemetryMiddleware() func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			routePattern := chi.RouteContext(r.Context()).RoutePattern()
+func telemetryMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		routePattern := chi.RouteContext(r.Context()).RoutePattern()
 
-			txName := fmt.Sprintf("%s (%s)", routePattern, r.Method)
+		txName := fmt.Sprintf("%s (%s)", routePattern, r.Method)
 
-			attr := []attribute.KeyValue{
-				{
-					Key:   "route_pattern",
-					Value: attribute.StringValue(txName),
-				},
-			}
+		attr := []attribute.KeyValue{
+			{
+				Key:   "route_pattern",
+				Value: attribute.StringValue(txName),
+			},
+		}
 
-			ctx, span := otel.GetTracerProvider().Tracer(_defaultApplicationName).
-				Start(r.Context(), "webapp.telemetry.middleware",
-					trace.WithAttributes(attr...))
-			defer span.End()
+		ctx, span := otel.Tracer(_defaultApplicationName).
+			Start(r.Context(), "webapp.telemetry.middleware",
+				trace.WithAttributes(attr...))
+		defer span.End()
 
-			r2 := r.WithContext(ctx)
+		r2 := r.WithContext(ctx)
 
-			// Wrap the http.ResponseWriter with a proxy for later response
-			// inspection.
-			w2 := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		// Wrap the http.ResponseWriter with a proxy for later response
+		// inspection.
+		w2 := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
-			start := time.Now()
-			next.ServeHTTP(w2, r2)
-			recordRequest(r2.Context(), w2.Status(), start, r.Method, routePattern)
-		})
-	}
+		start := time.Now()
+		next.ServeHTTP(w2, r2)
+		recordRequest(r2.Context(), w2.Status(), start, r.Method, routePattern)
+	})
 }
 
 func recordRequest(ctx context.Context, status int, delta time.Time, method, routePattern string) {
@@ -513,15 +509,16 @@ func recordRequest(ctx context.Context, status int, delta time.Time, method, rou
 			Value: attribute.StringValue(telemetry.SanitizeMetricTagValue(routePattern)),
 		},
 	}
-	httpReqCounter, err := otel.GetMeterProvider().Meter(_defaultApplicationName).
-		Int64UpDownCounter("http.server.request.counter")
+
+	meter := otel.Meter(_defaultApplicationName)
+
+	httpReqCounter, err := meter.Int64UpDownCounter("http.server.request.counter")
 	if err != nil {
 		return
 	}
 	httpReqCounter.Add(ctx, 1, metric.WithAttributes(attr...))
 
-	httpServerDuration, err := otel.GetMeterProvider().Meter(_defaultApplicationName).
-		Float64Histogram("http.server.request.duration")
+	httpServerDuration, err := meter.Float64Histogram("http.server.request.duration")
 	if err != nil {
 		return
 	}

@@ -6,7 +6,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/pomelo-la/go-toolkit/httprouter v0.2.1
 	github.com/pomelo-la/go-toolkit/logger v0.1.3
-	github.com/pomelo-la/go-toolkit/telemetry v0.1.6
+	github.com/pomelo-la/go-toolkit/telemetry v0.2.1
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.46.1
 	go.opentelemetry.io/otel v1.21.0

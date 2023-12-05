@@ -48,6 +48,10 @@ github.com/pomelo-la/go-toolkit/telemetry v0.1.5 h1:lInXCfdaixJChDFRm7khFmGmrhBZ
 github.com/pomelo-la/go-toolkit/telemetry v0.1.5/go.mod h1:x1K1bkqIqwF06VHHXXGg3VavfLgM1poNXQWbtC4wW/s=
 github.com/pomelo-la/go-toolkit/telemetry v0.1.6 h1:/DB4SeVMiarE61uhgBGZ5nwtfuqdWTbNMnkICvFWl3s=
 github.com/pomelo-la/go-toolkit/telemetry v0.1.6/go.mod h1:x1K1bkqIqwF06VHHXXGg3VavfLgM1poNXQWbtC4wW/s=
+github.com/pomelo-la/go-toolkit/telemetry v0.2.0 h1:JVlMKjzSdAwzyr23etZ6cQeBZRNU7iEKsWDg1xN5m+k=
+github.com/pomelo-la/go-toolkit/telemetry v0.2.0/go.mod h1:x1K1bkqIqwF06VHHXXGg3VavfLgM1poNXQWbtC4wW/s=
+github.com/pomelo-la/go-toolkit/telemetry v0.2.1 h1:+aZzAW0Qe+lTkIorK2cPYSOnOHSmI1CGmFx7HLSgRKg=
+github.com/pomelo-la/go-toolkit/telemetry v0.2.1/go.mod h1:x1K1bkqIqwF06VHHXXGg3VavfLgM1poNXQWbtC4wW/s=
 github.com/rogpeppe/go-internal v1.11.0 h1:cWPaGQEPrBb5/AsnsZesgZZ9yb1OQ+GOISoDNXVBh4M=
 github.com/rogpeppe/go-internal v1.11.0/go.mod h1:ddIwULY96R17DhadqLgMfk9H9tvdUzkipdSkR5nkCZA=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
