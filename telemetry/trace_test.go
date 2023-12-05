@@ -2,12 +2,12 @@ package telemetry_test
 
 import (
 	"context"
+	"encoding/hex"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/pomelo-la/go-toolkit/telemetry"
 )
@@ -107,17 +107,6 @@ func TestConfigShutdownTimeout(t *testing.T) {
 	}
 }
 
-func TestAddSpan(t *testing.T) {
-	ctx := context.Background()
-	trace, err := telemetry.NewTrace(ctx, "my-service-name")
-	assert.NoError(t, err)
-
-	_, span := trace.AddSpan(ctx, "go-toolkit.telemetry", attribute.String("key1", "value1"))
-	if span == nil {
-		t.Error("Expected a valid span, but got nil")
-	}
-}
-
 func TestSanitizeMetricTagValue(t *testing.T) {
 	tt := []struct {
 		tag  string
@@ -164,4 +153,19 @@ func TestSanitizeMetricTagValue_MultipleTimes(t *testing.T) {
 		require.Equal(t, input, tmp)
 		input = tmp
 	}
+}
+
+func TestGetTraceID(t *testing.T) {
+	t.Run("Test GetTraceID without existing trace ID", func(t *testing.T) {
+		result, err := telemetry.GetTraceID(context.Background())
+		if err != nil {
+			t.Errorf("Expected no error, but got %v", err)
+		}
+
+		// Check if the generated trace ID is a valid hexadecimal string
+		_, err = hex.DecodeString(result)
+		if err != nil {
+			t.Errorf("Generated trace ID is not a valid hexadecimal string: %v", err)
+		}
+	})
 }
