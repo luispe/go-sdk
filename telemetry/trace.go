@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -69,21 +68,6 @@ func NewTrace(ctx context.Context, serviceName string) (*Trace, error) {
 		))
 
 	return &Trace{trace: traceProvider}, nil
-}
-
-// AddSpan adds a OpenTelemetry span to the trace and context.
-func (tp Trace) AddSpan(ctx context.Context, spanName string, keyValues ...attribute.KeyValue) (context.Context, trace.Span) {
-	v, ok := ctx.Value(key).(*Values)
-	if !ok || v.Tracer == nil {
-		return ctx, trace.SpanFromContext(ctx)
-	}
-
-	ctx, span := v.Tracer.Start(ctx, spanName)
-	for _, kv := range keyValues {
-		span.SetAttributes(kv)
-	}
-
-	return ctx, span
 }
 
 // ShutdownTraceProvider shuts down the TraceProvider gracefully.

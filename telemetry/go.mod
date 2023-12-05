@@ -10,6 +10,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.20.0
 	go.opentelemetry.io/otel/sdk/metric v1.20.0
 	go.opentelemetry.io/otel/trace v1.20.0
+	go.uber.org/mock v0.3.0
 )
 
 require (
