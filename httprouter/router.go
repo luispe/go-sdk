@@ -164,6 +164,12 @@ func (r *Router) Trace(pattern string, handler Handler) {
 	r.mux.Trace(pattern, handler.ServeHTTP)
 }
 
+// Connect adds the route `pattern` that matches a CONNECT http method to
+// execute the `handlerFn` http.HandlerFunc.
+func (r *Router) Connect(pattern string, handler Handler) {
+	r.mux.Connect(pattern, handler.ServeHTTP)
+}
+
 // ServeHTTP conforms to the http.Handler interface.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.mux.ServeHTTP(w, req)

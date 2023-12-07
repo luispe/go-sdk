@@ -79,7 +79,7 @@ func (s Subscriber) ReceiveMessage(ctx context.Context, optFns ...func(options *
 // The result of the action on each message is reported individually in the
 // response (sqs.DeleteMessageBatchOutput). Because the batch request can result
 // in a combination of successful and unsuccessful actions, you should check for
-// batch errors even when the call returns an HTTP status code of 200 .
+// batch errors even when the call returns an HTTP status code of 200.
 func (s Subscriber) DeleteMessages(ctx context.Context, messages ...string) (*sqs.DeleteMessageBatchOutput, error) {
 	err := ensureLengthMessages(messages...)
 	if err != nil {
@@ -135,7 +135,8 @@ func WithVisibilityTimeout(visibilityTimeout int32) func(options *SubscriberOpti
 	}
 }
 
-// WithWaitTimeSeconds allows you to configure the WithVisibilityTimeout for use to enables long-poll support.
+// WithWaitTimeSeconds allows you to configure the WithWaitTimeSeconds for use
+// to enables long-poll support.
 func WithWaitTimeSeconds(waitTimeSeconds int32) func(options *SubscriberOptions) {
 	return func(opt *SubscriberOptions) {
 		opt.client.WaitTimeSeconds = waitTimeSeconds
