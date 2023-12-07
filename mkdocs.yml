@@ -1,0 +1,44 @@
+site_name: go-sdk
+nav:
+  - Overview: index.md
+  - Getting Started:
+      - Basic Usage: getting-started.md
+      - Clients: getting-started/clients/index.md
+      - Developers: getting-started/developers/index.md
+  - Usage packages:
+      - Introduction: packages.md
+      - httprouter:
+          - Getting Started: packages/httprouter/index.md
+          - Routing: packages/httprouter/routing/index.md
+          - Middleware: packages/httprouter/middleware/index.md
+          - Other Features: packages/httprouter/other-features/index.md
+      - logger: packages/logger/index.md
+      - Service:
+          - packages/services.md
+          - aws:
+              - config: packages/service/aws/config/index.md
+              - sqs: packages/service/aws/sqs/index.md
+              - s3: packages/service/aws/s3/index.md
+      - telemetry: packages/telemetry/index.md
+      - webapp: packages/webapp/index.md
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+
+theme:
+  font:
+    text: Work Sans
+  logo: assets/logo.png
+  name: material
+  palette:
+    primary: teal
+  features:
+    - navigation.path
+    - content.code.copy
