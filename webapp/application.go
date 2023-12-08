@@ -373,14 +373,14 @@ func defaultHTTPRouter(
 		_ = httprouter.RespondJSON(w, http.StatusNoContent, nil)
 	})
 
-	return httprouter.New(httprouter.Config{
-		Middlewares:                 middlewares,
-		NotFoundHandler:             notFoundHandler,
-		HealthCheckLivenessHandler:  livenessHandler,
-		HealthCheckReadinessHandler: readinessHandler,
-		EnableProfiler:              true,
-		ErrorHandlerFunc:            errorHandlerFunc,
-	})
+	return httprouter.New(
+		httprouter.WithGlobalMiddlewares(middlewares...),
+		httprouter.WithNotFoundHandler(notFoundHandler),
+		httprouter.WithHealthCheckLivenessHandler(livenessHandler),
+		httprouter.WithHealthCheckReadinessHandler(readinessHandler),
+		httprouter.WithEnableProfiler(true),
+		httprouter.WithErrorHandlerFunc(errorHandlerFunc),
+	)
 }
 
 // headerForwarder decorates a request context with the value of certain headers
