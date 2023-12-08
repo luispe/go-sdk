@@ -42,6 +42,8 @@ github.com/pomelo-la/go-toolkit/httprouter v0.2.0 h1:DQm4lFVZ/h+l2pyEVJQOwUVBc+Z
 github.com/pomelo-la/go-toolkit/httprouter v0.2.0/go.mod h1:R0UnQJr5E/Q/aNeVwvZZJyWcGOYY11sEzuSg8K8cBvE=
 github.com/pomelo-la/go-toolkit/httprouter v0.2.1 h1:ZvvnR/3d0Ssus23nXzckKBpx2ULFc9j0iGaBNovCawI=
 github.com/pomelo-la/go-toolkit/httprouter v0.2.1/go.mod h1:R0UnQJr5E/Q/aNeVwvZZJyWcGOYY11sEzuSg8K8cBvE=
+github.com/pomelo-la/go-toolkit/httprouter v0.3.0 h1:YLrp+5IdzoKBKTibPfdhFomuPq1s9zo1NsvVX1aarXE=
+github.com/pomelo-la/go-toolkit/httprouter v0.3.0/go.mod h1:R0UnQJr5E/Q/aNeVwvZZJyWcGOYY11sEzuSg8K8cBvE=
 github.com/pomelo-la/go-toolkit/logger v0.1.3 h1:IvKLuFbQ3A4DmvD6W1AKH5tXNjS7kBLzw2YveU6YHY0=
 github.com/pomelo-la/go-toolkit/logger v0.1.3/go.mod h1:3YxNPGp8jkhaemAlF6jPrppOtCF1vHUwYAUPz7pIDOM=
 github.com/pomelo-la/go-toolkit/telemetry v0.1.5 h1:lInXCfdaixJChDFRm7khFmGmrhBZUlRXFfrpJr86xCY=
