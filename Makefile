@@ -44,7 +44,7 @@ vuln: ## Scan vulnerabilities
 	"$(CURDIR)/scripts/vuln.sh" $(PKG_NAME)
 
 ## Docs:
-docs: ## LocalDocumentation
+documentation: ## LocalDocumentation
 	mkdocs serve
 
 ## Help:

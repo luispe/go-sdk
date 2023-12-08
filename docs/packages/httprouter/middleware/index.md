@@ -126,7 +126,7 @@ func getArticle(w http.ResponseWriter, r *http.Request) error {
 
 Let's explore the inline middleware scenario.
 
-```go
+```go hl_lines="6"
 r := httprouter.NewRouter()
 
 r.Use(MyMiddleware)
@@ -156,7 +156,7 @@ the endpoint of DeleteArticle using
 
     Why does the following scenario work?
 
-```go
+```go hl_lines="15"
 func main(){
     r := httprouter.NewRouter()
     
@@ -178,7 +178,7 @@ func main(){
 ```
 
 As we have mentioned `r.Route() and r.Group()` create 
-a new routing instance so a middeware can be declared as we do in
+a new routing instance so a middleware can be declared as we do in
 
     // Private Routes
     // Require Authentication
