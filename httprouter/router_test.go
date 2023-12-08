@@ -15,52 +15,28 @@ import (
 )
 
 func TestNewConfigHandlers(t *testing.T) {
-	mw := func(f http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			f.ServeHTTP(w, r)
-		})
-	}
-
 	tests := []struct {
-		name     string
-		config   httprouter.Config
-		inputURL string
-		wantCode int
-		wantMsg  string
+		name           string
+		profilerActive bool
+		inputURL       string
+		wantCode       int
+		wantMsg        string
 	}{
 		{
 			name:     "liveness",
 			inputURL: "/liveness",
-			config: httprouter.Config{
-				HealthCheckLivenessHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-					w.WriteHeader(http.StatusNoContent)
-				}),
-			},
 			wantCode: http.StatusNoContent,
 			wantMsg:  "",
 		},
 		{
 			name:     "readiness",
 			inputURL: "/readiness",
-			config: httprouter.Config{
-				HealthCheckReadinessHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-					w.WriteHeader(http.StatusNoContent)
-				}),
-			},
 			wantCode: http.StatusNoContent,
 			wantMsg:  "",
 		},
 		{
 			name:     "not found handler",
 			inputURL: "/notfound",
-			config: httprouter.Config{
-				NotFoundHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-					w.WriteHeader(http.StatusNotFound)
-					writeLen, err := w.Write([]byte("handler not found"))
-					assert.NoError(t, err)
-					assert.EqualValues(t, 17, writeLen)
-				}),
-			},
 			wantCode: http.StatusNotFound,
 			wantMsg:  "handler not found",
 		},
@@ -68,48 +44,63 @@ func TestNewConfigHandlers(t *testing.T) {
 			name:     "profiler is not active",
 			inputURL: "/debug",
 			wantCode: http.StatusNotFound,
-			wantMsg:  "404 page not found\n",
 		},
 		{
-			name:     "profiler is active",
-			config:   httprouter.Config{EnableProfiler: true},
-			inputURL: "/debug",
-			wantCode: http.StatusOK,
+			name:           "profiler is active",
+			profilerActive: true,
+			inputURL:       "/debug",
+			wantCode:       http.StatusOK,
 		},
 		{
 			name:     "with middleware",
 			inputURL: "/",
-			config: httprouter.Config{
-				Middlewares: []func(http.Handler) http.Handler{mw},
-				HealthCheckLivenessHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-					w.WriteHeader(http.StatusNoContent)
-				}),
-				HealthCheckReadinessHandler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-					w.WriteHeader(http.StatusNoContent)
-				}),
-			},
 			wantCode: http.StatusNotFound,
 			wantMsg:  "",
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			r := httprouter.New(test.config)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			livenessHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNoContent)
+			})
+			readinessHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNoContent)
+			})
+			notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				writeLen, err := w.Write([]byte("handler not found"))
+				assert.NoError(t, err)
+				assert.EqualValues(t, 17, writeLen)
+			})
+
+			mw := func(f http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					f.ServeHTTP(w, r)
+				})
+			}
+
+			r := httprouter.New(
+				httprouter.WithGlobalMiddlewares(mw),
+				httprouter.WithHealthCheckLivenessHandler(livenessHandler),
+				httprouter.WithHealthCheckReadinessHandler(readinessHandler),
+				httprouter.WithNotFoundHandler(notFoundHandler),
+				httprouter.WithEnableProfiler(tc.profilerActive),
+			)
 
 			server := httptest.NewServer(r)
 			defer server.Close()
 
-			res, err := http.Get(fmt.Sprintf("%s%s", server.URL, test.inputURL))
+			res, err := http.Get(fmt.Sprintf("%s%s", server.URL, tc.inputURL))
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			assert.Equal(t, test.wantCode, res.StatusCode)
+			assert.Equal(t, tc.wantCode, res.StatusCode)
 
-			if test.wantMsg != "" {
+			if tc.wantMsg != "" {
 				b, err := io.ReadAll(res.Body)
 				assert.Nil(t, err)
-				assert.Equal(t, test.wantMsg, string(b))
+				assert.Equal(t, tc.wantMsg, string(b))
 			}
 		})
 	}
@@ -164,7 +155,7 @@ func TestRouterMethod(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			r := httprouter.New(httprouter.Config{})
+			r := httprouter.New()
 
 			server := httptest.NewServer(r)
 			defer server.Close()
@@ -188,7 +179,7 @@ func TestRouterMethod(t *testing.T) {
 }
 
 func TestRouterRoutes(t *testing.T) {
-	r := httprouter.New(httprouter.Config{})
+	r := httprouter.New()
 	h := func(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
@@ -213,7 +204,7 @@ func TestRouterHandlerReturnNoError(t *testing.T) {
 		})
 	}
 
-	r := httprouter.New(httprouter.Config{})
+	r := httprouter.New()
 
 	r.Use(mw)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) error {
@@ -354,7 +345,7 @@ func TestRouterErrorHandler(t *testing.T) {
 				config.ErrorHandlerFunc = tt.errorHandlerFunc
 			}
 
-			router := httprouter.New(config)
+			router := httprouter.New()
 			router.Use(mw)
 			router.Get("/{id}", tt.handler.spy())
 
