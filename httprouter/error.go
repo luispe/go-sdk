@@ -8,10 +8,9 @@ import (
 
 // Error is our custom error's interface implementation.
 type Error struct {
-	Message    string        `json:"message"`
-	Code       string        `json:"error"`
-	StatusCode int           `json:"status"`
-	Cause      []interface{} `json:"cause"`
+	Message    string `json:"message"`
+	Code       string `json:"error"`
+	StatusCode int    `json:"status"`
 }
 
 // Error returns a string message of the error. It is a concatenation of Code and Message fields.

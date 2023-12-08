@@ -43,6 +43,10 @@ static_checks: ## Run static check and go vet on your project
 vuln: ## Scan vulnerabilities
 	"$(CURDIR)/scripts/vuln.sh" $(PKG_NAME)
 
+## Docs:
+docs: ## LocalDocumentation
+	mkdocs serve
+
 ## Help:
 help: ## Show this help.
 	@echo ''

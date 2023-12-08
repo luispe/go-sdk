@@ -29,6 +29,54 @@ type Config struct {
 	Middlewares []func(http.Handler) http.Handler
 }
 
+// WithErrorHandlerFunc allows you to configure the ErrorHandlerFunc for use to
+// router.
+func WithErrorHandlerFunc(errorHandlerFunc ErrorHandlerFunc) func(options *Config) {
+	return func(opt *Config) {
+		opt.ErrorHandlerFunc = errorHandlerFunc
+	}
+}
+
+// WithNotFoundHandler allows you to configure the NotFoundHandler for use to
+// router.
+func WithNotFoundHandler(notFoundHandler http.Handler) func(options *Config) {
+	return func(opt *Config) {
+		opt.NotFoundHandler = notFoundHandler
+	}
+}
+
+// WithHealthCheckLivenessHandler allows you to configure the
+// HealthCheckLivenessHandler for use to router.
+func WithHealthCheckLivenessHandler(livenessHandler http.Handler) func(options *Config) {
+	return func(opt *Config) {
+		opt.HealthCheckLivenessHandler = livenessHandler
+	}
+}
+
+// WithHealthCheckReadinessHandler allows you to configure the
+// HealthCheckReadinessHandler for use to router.
+func WithHealthCheckReadinessHandler(readinessHandler http.Handler) func(options *Config) {
+	return func(opt *Config) {
+		opt.HealthCheckReadinessHandler = readinessHandler
+	}
+}
+
+// WithEnableProfiler allows you to configure the
+// EnableProfiler for router.
+func WithEnableProfiler(enableProfiler bool) func(options *Config) {
+	return func(opt *Config) {
+		opt.EnableProfiler = enableProfiler
+	}
+}
+
+// WithGlobalMiddlewares allows you to configure the
+// Middlewares for use to router.
+func WithGlobalMiddlewares(middlewares ...func(http.Handler) http.Handler) func(options *Config) {
+	return func(opt *Config) {
+		opt.Middlewares = middlewares
+	}
+}
+
 // Router is a http.Handler which can be used to dispatch requests to different
 // handler functions via configurable routes.
 type Router struct {
@@ -37,32 +85,37 @@ type Router struct {
 }
 
 // New instantiates a `Router` with the given configuration.
-func New(cfg Config) *Router {
+func New(optFns ...func(options *Config)) *Router {
 	mux := chi.NewRouter()
 
-	if cfg.Middlewares != nil {
-		mux.Use(cfg.Middlewares...)
+	var opts Config
+	for _, fn := range optFns {
+		fn(&opts)
 	}
 
-	if cfg.NotFoundHandler != nil {
-		mux.NotFound(cfg.NotFoundHandler.ServeHTTP)
+	if opts.Middlewares != nil {
+		mux.Use(opts.Middlewares...)
 	}
 
-	if cfg.HealthCheckLivenessHandler != nil {
-		mux.Get("/liveness", cfg.HealthCheckLivenessHandler.ServeHTTP)
+	if opts.NotFoundHandler != nil {
+		mux.NotFound(opts.NotFoundHandler.ServeHTTP)
 	}
 
-	if cfg.HealthCheckReadinessHandler != nil {
-		mux.Get("/readiness", cfg.HealthCheckReadinessHandler.ServeHTTP)
+	if opts.HealthCheckLivenessHandler != nil {
+		mux.Get("/liveness", opts.HealthCheckLivenessHandler.ServeHTTP)
 	}
 
-	if cfg.EnableProfiler {
+	if opts.HealthCheckReadinessHandler != nil {
+		mux.Get("/readiness", opts.HealthCheckReadinessHandler.ServeHTTP)
+	}
+
+	if opts.EnableProfiler {
 		mux.Mount("/debug", middleware.Profiler())
 	}
 
 	return &Router{
 		mux:            mux,
-		errHandlerFunc: cfg.ErrorHandlerFunc,
+		errHandlerFunc: opts.ErrorHandlerFunc,
 	}
 }
 
@@ -102,7 +155,7 @@ func (r *Router) Route(pattern string, fn func(r Router)) *Router {
 		panic(fmt.Sprintf("httrouter: attempting to Route() a nil subrouter on '%s'", pattern))
 	}
 
-	subRouter := New(Config{})
+	subRouter := New()
 	fn(*subRouter)
 	r.mux.Mount(pattern, subRouter)
 
@@ -162,6 +215,12 @@ func (r *Router) Put(pattern string, handler Handler) {
 // execute the `handlerFn` http.HandlerFunc.
 func (r *Router) Trace(pattern string, handler Handler) {
 	r.mux.Trace(pattern, handler.ServeHTTP)
+}
+
+// Connect adds the route `pattern` that matches a CONNECT http method to
+// execute the `handlerFn` http.HandlerFunc.
+func (r *Router) Connect(pattern string, handler Handler) {
+	r.mux.Connect(pattern, handler.ServeHTTP)
 }
 
 // ServeHTTP conforms to the http.Handler interface.

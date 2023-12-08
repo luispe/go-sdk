@@ -64,7 +64,7 @@ func TestMidBreaker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			app := httprouter.New(httprouter.Config{})
+			app := httprouter.New()
 
 			var cb breaker
 			defer cb.AssertExpectations(t)
