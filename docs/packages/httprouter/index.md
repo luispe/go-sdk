@@ -39,7 +39,7 @@ type Greet struct {
 }
 
 func main() {
-	r := httprouter.New(httprouter.Config{})
+	r := httprouter.New()
 	
 	r.Get("/hello/{go-toolkit}", func(w http.ResponseWriter, r *http.Request) error {
 		urlParams := httprouter.URLParam(r, "go-toolkit")
@@ -72,7 +72,7 @@ Execute curl to call the API
 First we instantiate the router that will be used for registering 
 HTTP handlers.
 
-    r := httprouter.New(httprouter.Config{})
+    r := httprouter.New()
 
 Then we register a GET handler. This handler receives a string by 
 URI param and returns a JSON with a greeting message.
