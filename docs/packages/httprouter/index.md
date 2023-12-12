@@ -17,11 +17,11 @@ We believe that this new handler signature allows us to handle more
 subtly what a handler returns and to wrap and return errors 
 more elegantly to the client.
 
-### Install
+## Install
 
     go get -u github.com/pomelo-la/go-sdk/httprouter
 
-### Running a simple server
+## Running a simple server
 
 ```go
 package main

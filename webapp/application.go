@@ -447,7 +447,7 @@ func panicsMiddleware(log logger.Logger) func(next http.Handler) http.Handler {
 					log.Error(r.Context(), "panic recover")
 
 					statusCode := http.StatusInternalServerError
-					httprouter.NotifyErr(r, fmt.Errorf("%v", err), statusCode)
+					notifyErr(r, fmt.Errorf("%v", err), statusCode)
 					_ = httprouter.RespondJSON(w, statusCode, httprouter.NewErrorf(statusCode, fmt.Sprintf("%v", err)))
 				}
 			}()
@@ -487,6 +487,39 @@ func telemetryMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w2, r2)
 		recordRequest(r2.Context(), w2.Status(), start, r.Method, routePattern)
 	})
+}
+
+// notifyErr notifies a tracer of an error that occurred while processing a request.
+func notifyErr(r *http.Request, err error, statusCode int) {
+	tracer := trace.SpanFromContext(r.Context())
+
+	if tracer != nil {
+		tracer.AddEvent("error", trace.WithAttributes(
+			attribute.String("uri", r.RequestURI),
+			attribute.Int("statusCode", statusCode),
+		))
+
+		for k, v := range getKeyValueParams(r) {
+			tracer.AddEvent("param", trace.WithAttributes(
+				attribute.String(k, v),
+			))
+		}
+
+		tracer.RecordError(err)
+	}
+}
+
+func getKeyValueParams(r *http.Request) map[string]string {
+	urlParams := chi.RouteContext(r.Context()).URLParams
+
+	params := make(map[string]string, len(urlParams.Keys))
+
+	for index, key := range urlParams.Keys {
+		value := urlParams.Values[index]
+		params[key] = value
+	}
+
+	return params
 }
 
 func recordRequest(ctx context.Context, status int, delta time.Time, method, routePattern string) {

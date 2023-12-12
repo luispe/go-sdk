@@ -38,7 +38,19 @@ theme:
   logo: assets/logo.png
   name: material
   palette:
-    primary: teal
+    # Palette toggle for light mode
+    - primary: teal
+      scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - primary: teal
+      scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
   features:
     - navigation.path
     - content.code.copy
