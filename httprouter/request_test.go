@@ -1,174 +1,62 @@
 package httprouter_test
 
 import (
-	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/pomelo-la/go-toolkit/httprouter"
 )
 
-func TestParams(t *testing.T) {
-	m := make(httprouter.URIParams)
-	ctx := context.WithValue(context.Background(), httprouter.URIParamsCtxKey{}, m)
-	r, _ := http.NewRequest("GET", "/", nil)
-	assert.Equal(t, m, httprouter.Params(r.WithContext(ctx)))
-}
+func TestURLParam(t *testing.T) {
+	r := httprouter.New()
 
-func TestParamsNotFoundInContext(t *testing.T) {
-	r, _ := http.NewRequest("GET", "/", nil)
-	assert.Nil(t, httprouter.Params(r))
-}
+	// Set up a route that captures a named URL parameter
+	r.Get("/{param}", func(w http.ResponseWriter, r *http.Request) error {
+		param := httprouter.URLParam(r, "param")
+		w.Write([]byte(param))
+		return nil
+	})
 
-func TestParamsConversionFunctionsOK(t *testing.T) {
-	params := httprouter.URIParams{
-		"string": "go-toolkit rules!",
-		"int":    "-1",
-		"bool":   "true",
-		"noint":  "wish I'd be a number",
-		"nobool": "fuzzy",
-		"uint":   "1",
-		"nouint": "spread love anywhere you go",
-	}
-
-	type testParams struct {
-		expectValue any
-		assertFunc  func(string) (any, error)
-		name        string
-	}
-
-	tt := map[string]testParams{
-		"string": {
-			expectValue: "go-toolkit rules!",
-			assertFunc: func(p string) (any, error) {
-				return params.String(p)
-			},
-			name: "convert to string",
-		},
-		"int": {
-			expectValue: -1,
-			assertFunc: func(p string) (any, error) {
-				return params.Int(p)
-			},
-			name: "convert to int",
-		},
-		"uint": {
-			expectValue: uint(1),
-			assertFunc: func(p string) (any, error) {
-				return params.Uint(p)
-			},
-			name: "convert to uint",
-		},
-		"bool": {
-			expectValue: true,
-			assertFunc: func(p string) (any, error) {
-				return params.Bool(p)
-			},
-			name: "convert to bool",
-		},
-	}
-
-	for k, tt := range tt {
-		t.Run(tt.name, func(t *testing.T) {
-			actual, err := tt.assertFunc(k)
-			require.Nil(t, err)
-			require.EqualValues(t, tt.expectValue, actual)
-		})
-	}
-}
-
-func TestParamsConversionFunctionsParamsNotFound(t *testing.T) {
-	params := httprouter.URIParams{}
-
-	type testParams struct {
-		assertFunc func(string) error
-		name       string
-	}
-
-	tests := []testParams{
+	testCases := []struct {
+		name     string
+		url      string
+		expected string
+	}{
 		{
-			assertFunc: func(p string) error {
-				_, err := params.String(p)
-				return err
-			},
-			name: "convert to string should fail",
+			name:     "Simple",
+			url:      "/test",
+			expected: "test",
 		},
 		{
-			assertFunc: func(p string) error {
-				_, err := params.Int(p)
-				return err
-			},
-			name: "convert to int should fail",
+			name:     "Number",
+			url:      "/123",
+			expected: "123",
 		},
 		{
-			assertFunc: func(p string) error {
-				_, err := params.Uint(p)
-				return err
-			},
-			name: "convert to uint should fail",
+			name:     "SpecialCharacter",
+			url:      "/test+test",
+			expected: "test+test",
 		},
 		{
-			assertFunc: func(p string) error {
-				_, err := params.Bool(p)
-				return err
-			},
-			name: "convert to bool should fail",
+			name:     "Empty",
+			url:      "/",
+			expected: "404 page not found\n",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.EqualValues(t, httprouter.NewErrorf(500, "uri param is not found: %s", "non_existing_param"), tt.assertFunc("non_existing_param"))
-		})
-	}
-}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			request := httptest.NewRequest("GET", tc.url, nil)
+			responseRecorder := httptest.NewRecorder()
 
-func TestParamsConversionFunctionsInvalidValueType(t *testing.T) {
-	params := httprouter.URIParams{
-		"noint":  "wish I'd be a number",
-		"nobool": "fuzzy",
-		"nouint": "spread love anywhere you go",
-	}
+			r.ServeHTTP(responseRecorder, request)
 
-	type testParams struct {
-		assertFunc func(string) error
-		name       string
-		errMsgFmt  string
-	}
+			result := responseRecorder.Body.String()
 
-	tests := map[string]testParams{
-		"noint": {
-			assertFunc: func(p string) error {
-				_, err := params.Int(p)
-				return err
-			},
-			name:      "invalid int type conversion",
-			errMsgFmt: "uri param %s is not an int value: %s",
-		},
-		"nouint": {
-			assertFunc: func(p string) error {
-				_, err := params.Uint(p)
-				return err
-			},
-			name:      "invalid uint type conversion",
-			errMsgFmt: "uri param %s is not an uint value: %s",
-		},
-		"nobool": {
-			assertFunc: func(p string) error {
-				_, err := params.Bool(p)
-				return err
-			},
-			name:      "invalid bool type conversion",
-			errMsgFmt: "uri param %s is not an bool value: %s",
-		},
-	}
-
-	for k, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, httprouter.NewErrorf(400, tt.errMsgFmt, k, params[k]), tt.assertFunc(k))
+			if result != tc.expected {
+				t.Errorf("expected URLParam %q, got %q", tc.expected, result)
+			}
 		})
 	}
 }

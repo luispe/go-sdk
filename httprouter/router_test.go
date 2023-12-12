@@ -352,8 +352,7 @@ func TestRouterErrorHandler(t *testing.T) {
 			rr := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/1", nil)
 
-			ctx := httprouter.WithParams(req.Context(), map[string]string{"id": "1"})
-			req = req.WithContext(ctx)
+			req = req.WithContext(req.Context())
 
 			router.ServeHTTP(rr, req)
 
