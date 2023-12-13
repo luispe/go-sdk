@@ -409,6 +409,14 @@ func logMiddleware(log logger.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
+
+			for _, ignoreRoute := range []string{"/liveness", "/readiness"} {
+				if path == ignoreRoute {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+
 			if r.URL.RawQuery != "" {
 				path = fmt.Sprintf("%s?%s", path, r.URL.RawQuery)
 			}
