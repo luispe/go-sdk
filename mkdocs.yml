@@ -1,4 +1,4 @@
-site_name: go-sdk
+site_name: go-toolkit
 nav:
   - Overview: index.md
   - Getting Started:
@@ -31,7 +31,6 @@ markdown_extensions:
   - pymdownx.superfences
   - admonition
   - pymdownx.details
-
 theme:
   font:
     text: Work Sans

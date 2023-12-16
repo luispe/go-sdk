@@ -4,14 +4,14 @@ The service/aws/config module is intended to establish a configuration
 with the aws client that will later be used to interact with
 the different amazon web services (aws).
 
-Throughout the guide we will see how we can use the go-sdk api
+Throughout the guide we will see how we can use the go-toolkit api
 and set configurations for aws-sdk v1, aws-sdk v2 and finally
 how to make specific configurations to connect to
 [localstack](https://www.localstack.cloud/).
 
 ### Install
 
-    go get -u github.com/pomelo-la/go-sdk/service/aws/config
+    go get -u github.com/pomelo-la/go-toolkit/service/aws/config
 
 ### Configuring aws/config for v2 of aws-sdk-go
 

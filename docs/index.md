@@ -1,10 +1,10 @@
-# go-sdk
+# go-toolkit
 
-## What is go-sdk?
+## What is go-toolkit?
 
-go-sdk provide "plumbing" primitives for creating web applications.
+go-toolkit provide "plumbing" primitives for creating web applications.
 
-## What is not go-sdk?
+## What is not go-toolkit?
 
 It is not a framework but rather a set of simple utilities that 
 can be used independently of each other.

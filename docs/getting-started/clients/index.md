@@ -2,7 +2,7 @@
 
 ## Before started
 
-One of the main concepts for working with go-sdk is that each
+One of the main concepts for working with go-toolkit is that each
 module/package works separately, this makes administration easier
 and for the client it is a better experience since it only
 downloads the transitive dependencies of a single module.
@@ -15,7 +15,7 @@ the different amazon web services (aws).
 
 ### Install
 
-    go get -u github.com/pomelo-la/go-sdk/service/aws/config
+    go get -u github.com/pomelo-la/go-toolkit/service/aws/config
 
 ### Configuring aws/config for v1 of aws-sdk
 

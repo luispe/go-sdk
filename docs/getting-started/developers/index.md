@@ -8,7 +8,7 @@ good grounding in Go, try out [the tutorial](https://tour.golang.org/).
 
 !!! info
 
-    One of the main concepts for working with go-sdk is that each
+    One of the main concepts for working with go-toolkit is that each
     module/package works separately, this makes administration easier
     and for the client it is a better experience since it only
     downloads the transitive dependencies of a single module.

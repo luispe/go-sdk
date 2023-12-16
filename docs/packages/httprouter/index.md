@@ -19,7 +19,7 @@ more elegantly to the client.
 
 ## Install
 
-    go get -u github.com/pomelo-la/go-sdk/httprouter
+    go get -u github.com/pomelo-la/go-toolkit/httprouter
 
 ## Running a simple server
 

@@ -10,7 +10,7 @@ from an application working in the web environment.
 
 ## Install
 
-    go get -u github.com/pomelo-la/go-sdk/webapp
+    go get -u github.com/pomelo-la/go-toolkit/webapp
 
 ## Create a Application
 

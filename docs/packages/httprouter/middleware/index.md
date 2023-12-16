@@ -55,7 +55,7 @@ receives parameters
 
 ```go
 // log decorates the request context with the given logger, accessible via
-// the go-sdk log methods with context.
+// the go-toolkit log methods with context.
 func logMiddleware(log logger.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

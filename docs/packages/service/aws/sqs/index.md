@@ -10,7 +10,7 @@ receive messages from a queue and delete them.
 
 ### Install
 
-    go get -u github.com/pomelo-la/go-sdk/service/aws/sqs
+    go get -u github.com/pomelo-la/go-toolkit/service/aws/sqs
 
 ## Publisher
 
