@@ -4,7 +4,6 @@ go 1.21.1
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
-	github.com/pomelo-la/platform-pkgs v0.1.6
 	github.com/stretchr/testify v1.8.4
 )
 
