@@ -41,6 +41,7 @@ func New(optFns ...func(opts *Config)) (*aws.Config, error) {
 	return &cfg, nil
 }
 
+//revive:disable:unused-parameter
 func buildLocalStackAwsConfig(opts Config) (*aws.Config, error) {
 	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 		return aws.Endpoint{
@@ -60,3 +61,5 @@ func buildLocalStackAwsConfig(opts Config) (*aws.Config, error) {
 
 	return &cfg, nil
 }
+
+//revive:enable:unused-parameter
