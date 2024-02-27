@@ -365,6 +365,7 @@ func defaultHTTPRouter(
 		_ = httprouter.RespondJSON(w, http.StatusNotFound, err)
 	})
 
+	//revive:disable:unused-parameter
 	livenessHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = httprouter.RespondJSON(w, http.StatusNoContent, nil)
 	})
@@ -372,6 +373,7 @@ func defaultHTTPRouter(
 	readinessHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = httprouter.RespondJSON(w, http.StatusNoContent, nil)
 	})
+	//revive:enable:unused-parameter
 
 	return httprouter.New(
 		httprouter.WithGlobalMiddlewares(middlewares...),
@@ -410,12 +412,7 @@ func logMiddleware(log logger.Logger) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
 
-			for _, ignoreRoute := range []string{"/liveness", "/readiness"} {
-				if path == ignoreRoute {
-					next.ServeHTTP(w, r)
-					return
-				}
-			}
+			ignoreLogRoutes(w, r, path, next)
 
 			if r.URL.RawQuery != "" {
 				path = fmt.Sprintf("%s?%s", path, r.URL.RawQuery)
@@ -429,6 +426,15 @@ func logMiddleware(log logger.Logger) func(next http.Handler) http.Handler {
 
 			next.ServeHTTP(w, r)
 		})
+	}
+}
+
+func ignoreLogRoutes(w http.ResponseWriter, r *http.Request, path string, next http.Handler) {
+	for _, ignoreRoute := range []string{"/liveness", "/readiness"} {
+		if path == ignoreRoute {
+			next.ServeHTTP(w, r)
+			return
+		}
 	}
 }
 
@@ -597,7 +603,7 @@ func exportedVarPoolHTTP() {
 	}
 
 	_, err := otel.GetMeterProvider().Meter(_defaultApplicationName).Int64ObservableGauge("http.client.conn_pool",
-		metric.WithInt64Callback(func(ctx context.Context, observer metric.Int64Observer) error {
+		metric.WithInt64Callback(func(_ context.Context, observer metric.Int64Observer) error {
 			for pool, v := range info {
 				for network, conns := range v {
 					attr := []attribute.KeyValue{

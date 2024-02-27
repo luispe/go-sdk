@@ -86,6 +86,7 @@ func DecodeToken(r *http.Request) (*Claims, error) {
 	return claims, nil
 }
 
+//revive:disable:unused-parameter
 func ensureValidToken(tokenHeader string) (*jwt.Token, error) {
 	token, err := jwt.ParseWithClaims(tokenHeader, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return jwt.ParseRSAPublicKeyFromPEM([]byte(os.Getenv("CONTEXT_API_PUBLIC_KEY")))
@@ -103,3 +104,5 @@ func ensureValidToken(tokenHeader string) (*jwt.Token, error) {
 
 	return token, nil
 }
+
+//revive:enable:unused-parameter
