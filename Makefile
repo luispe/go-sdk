@@ -45,7 +45,7 @@ vuln: ## Scan vulnerabilities
 
 ## Docs:
 documentation: ## LocalDocumentation
-	mkdocs serve
+	"$(CURDIR)/scripts/docs.sh"
 
 ## Help:
 help: ## Show this help.

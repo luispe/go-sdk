@@ -70,7 +70,12 @@ go github.com/pomelo-la/go-toolki/logger
 
 * [GitHub discussions](https://github.com/pomelo-la/go-toolkit/discussions) - For ideas, RFCs & general questions
 * [GitHub issues](https://github.com/pomelo-la/go-toolkit/issues/new/choose) – For bug reports & feature requests
-* [Usage examples](https://github.com/pomelo-la/go-toolkit-examples)
+
+### Use examples
+
+```shell
+make documentation
+```
 
 ### Contributing
 
