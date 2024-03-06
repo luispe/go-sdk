@@ -16,4 +16,4 @@ go get github.com/pomelo-la/go-toolkit/httprouter
 
 Please visit and contribute to the community examples
 
-* [Usage examples](https://github.com/pomelo-la/go-toolkit-examples)
+* [Usage examples](https://github.com/pomelo-la/go-toolkit/tree/develop?tab=readme-ov-file#use-examples)

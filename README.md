@@ -73,6 +73,8 @@ go github.com/pomelo-la/go-toolki/logger
 
 ### Use examples
 
+In the root of the repository run
+
 ```shell
 make documentation
 ```
