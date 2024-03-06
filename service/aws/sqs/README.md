@@ -25,3 +25,10 @@ Contains the api methods and abstractions necessary to be able to send messages 
 
 Contains the api methods and abstractions necessary to be able to 
 receive messages from a queue and delete them.
+
+### Examples
+
+Please visit and contribute to the community examples
+
+* [Usage examples](https://github.com/pomelo-la/go-toolkit/tree/develop?tab=readme-ov-file#use-examples)
+
