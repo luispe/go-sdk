@@ -1,6 +1,6 @@
 module github.com/pomelo-la/go-toolkit/service/aws/config
 
-go 1.21.1
+go 1.22
 
 require (
 	github.com/aws/aws-sdk-go v1.50.36
