@@ -1,6 +1,6 @@
 module github.com/pomelo-la/go-toolkit/auth
 
-go 1.21.1
+go 1.22
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
